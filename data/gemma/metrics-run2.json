@@ -1,0 +1,116 @@
+{
+  "train": {
+    "n": 560,
+    "pointer_exact": 1.0,
+    "total_mae": 1449.24,
+    "total_within_1": 0.0,
+    "null_accuracy": 1.0,
+    "samples": [
+      {
+        "order_id": "INV-8123",
+        "predicted_slice": " INV-8123",
+        "total": 5963.42,
+        "predicted_total": 5700.65,
+        "p_null_true": 1.0,
+        "p_null_pred": 1.0
+      },
+      {
+        "order_id": "ZZ-28806",
+        "predicted_slice": " ZZ-28806",
+        "total": 4350.94,
+        "predicted_total": 4620.89,
+        "p_null_true": 0.0,
+        "p_null_pred": 0.0
+      },
+      {
+        "order_id": "ZZ-87027",
+        "predicted_slice": " ZZ-87027",
+        "total": 942.53,
+        "predicted_total": 2384.53,
+        "p_null_true": 0.0,
+        "p_null_pred": 0.0
+      },
+      {
+        "order_id": "ZZ-84234",
+        "predicted_slice": " ZZ-84234",
+        "total": 7487.39,
+        "predicted_total": 2954.56,
+        "p_null_true": 1.0,
+        "p_null_pred": 1.0
+      },
+      {
+        "order_id": "OD-28172",
+        "predicted_slice": " OD-28172",
+        "total": 7874.74,
+        "predicted_total": 7383.71,
+        "p_null_true": 1.0,
+        "p_null_pred": 1.0
+      },
+      {
+        "order_id": "ZZ-78828",
+        "predicted_slice": " ZZ-78828",
+        "total": 8941.54,
+        "predicted_total": 2954.56,
+        "p_null_true": 1.0,
+        "p_null_pred": 1.0
+      }
+    ]
+  },
+  "test": {
+    "n": 140,
+    "pointer_exact": 1.0,
+    "total_mae": 2189.44,
+    "total_within_1": 0.0,
+    "null_accuracy": 1.0,
+    "samples": [
+      {
+        "order_id": "ZZ-60409",
+        "predicted_slice": " ZZ-60409",
+        "total": 3253.16,
+        "predicted_total": 10613.43,
+        "p_null_true": 0.0,
+        "p_null_pred": 0.0
+      },
+      {
+        "order_id": "ZZ-52246",
+        "predicted_slice": " ZZ-52246",
+        "total": 4114.07,
+        "predicted_total": 3599.01,
+        "p_null_true": 0.0,
+        "p_null_pred": 0.0
+      },
+      {
+        "order_id": "OD-54725",
+        "predicted_slice": " OD-54725",
+        "total": 4154.33,
+        "predicted_total": 4464.82,
+        "p_null_true": 1.0,
+        "p_null_pred": 0.998
+      },
+      {
+        "order_id": "OD-92548",
+        "predicted_slice": " OD-92548",
+        "total": 2034.11,
+        "predicted_total": 7256.68,
+        "p_null_true": 0.0,
+        "p_null_pred": 0.0
+      },
+      {
+        "order_id": "A-58492",
+        "predicted_slice": " A-58492",
+        "total": 6207.39,
+        "predicted_total": 3680.18,
+        "p_null_true": 1.0,
+        "p_null_pred": 1.0
+      },
+      {
+        "order_id": "A-98190",
+        "predicted_slice": " A-98190",
+        "total": 497.66,
+        "predicted_total": -3337.45,
+        "p_null_true": 1.0,
+        "p_null_pred": 1.0
+      }
+    ]
+  }
+}
