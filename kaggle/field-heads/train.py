@@ -104,50 +104,40 @@ def accept(text: str, row: dict) -> bool:
 
 
 def load_model():
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoModelForCausalLM, AutoProcessor
 
-    candidates = ["google/gemma-4-E2B-it", "google/gemma-4-E2B"]
-    last = None
-    for model_id in candidates:
-        try:
-            tokenizer = AutoTokenizer.from_pretrained(model_id)
-            model = AutoModelForCausalLM.from_pretrained(
-                model_id,
-                torch_dtype=torch.float16,
-                device_map="cuda",
-            )
-            model.eval()
-            status({"event": "model_loaded", "model_id": model_id, "class": type(model).__name__})
-            return model_id, tokenizer, model
-        except Exception as exc:  # noqa: BLE001
-            last = f"{model_id}: {type(exc).__name__}: {exc}"
-            status({"event": "model_load_failed", "detail": last[:500]})
-    raise RuntimeError(last or "no model loaded")
+    model_id = "google/gemma-4-E2B-it"
+    processor = AutoProcessor.from_pretrained(model_id)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        dtype=torch.float16,
+        device_map="cuda",
+    )
+    model.eval()
+    status({"event": "model_loaded", "model_id": model_id, "class": type(model).__name__})
+    return model_id, processor, model
 
 
-def generate_note(model, tokenizer, prompt: str) -> str:
-    messages = [{"role": "user", "content": prompt}]
-    try:
-        ids = tokenizer.apply_chat_template(
-            messages, add_generation_prompt=True, return_tensors="pt"
-        )
-    except Exception:
-        ids = tokenizer(prompt, return_tensors="pt").input_ids
-    ids = ids.to(model.device)
+def generate_note(model, processor, prompt: str) -> str:
+    messages = [
+        {"role": "system", "content": "You write short customer notes. Reply with the note only."},
+        {"role": "user", "content": prompt},
+    ]
+    inputs = processor.apply_chat_template(
+        messages,
+        tokenize=True,
+        return_dict=True,
+        return_tensors="pt",
+        add_generation_prompt=True,
+        enable_thinking=False,
+    ).to(model.device)
+    input_len = inputs["input_ids"].shape[-1]
     with torch.inference_mode():
-        out = model.generate(
-            ids,
-            max_new_tokens=MAX_NEW,
-            do_sample=True,
-            temperature=0.8,
-            top_p=0.9,
-            pad_token_id=tokenizer.eos_token_id,
-        )
-    new = out[0, ids.shape[-1] :]
-    return tokenizer.decode(new, skip_special_tokens=True).strip()
+        out = model.generate(**inputs, max_new_tokens=MAX_NEW, do_sample=True, temperature=0.8, top_p=0.9)
+    return processor.decode(out[0][input_len:], skip_special_tokens=True).strip()
 
 
-def generate_rows(model, tokenizer):
+def generate_rows(model, processor):
     rng = random.Random(SEED)
     started = time.time()
     kept = []
@@ -157,9 +147,10 @@ def generate_rows(model, tokenizer):
             break
         row = slots(rng)
         try:
-            text = generate_note(model, tokenizer, prompt_for(row))
-        except Exception as exc:  # noqa: BLE001
-            status({"event": "generate_error", "detail": str(exc)[:300]})
+            text = generate_note(model, processor, prompt_for(row))
+        except Exception:  # noqa: BLE001
+            import traceback
+            status({"event": "generate_error", "detail": traceback.format_exc()[-1500:]})
             break
         if accept(text, row):
             start = text.index(row["order_id"])
@@ -364,8 +355,9 @@ def main():
     if not torch.cuda.is_available():
         raise RuntimeError("No GPU in this Kaggle session.")
     status({"event": "cuda", "device": torch.cuda.get_device_name(0)})
-    _, tokenizer, model = load_model()
-    rows = generate_rows(model, tokenizer)
+    _, processor, model = load_model()
+    tokenizer = processor.tokenizer
+    rows = generate_rows(model, processor)
     ACCEPTED.write_text("".join(json.dumps(row) + "\n" for row in rows))
     if len(rows) < 40:
         raise RuntimeError(f"Only {len(rows)} notes passed the checks.")
