@@ -357,6 +357,10 @@ def evaluate(heads, cache):
 
 
 def main():
+    import subprocess
+    import sys
+
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "-U", "transformers", "accelerate"])
     if not torch.cuda.is_available():
         raise RuntimeError("No GPU in this Kaggle session.")
     status({"event": "cuda", "device": torch.cuda.get_device_name(0)})
