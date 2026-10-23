@@ -1,0 +1,17 @@
+{
+  "kept": 12,
+  "dropped": [],
+  "split": {
+    "train": 10,
+    "val": 1,
+    "test": 1
+  },
+  "fields": {
+    "date": 15,
+    "duration": 12,
+    "list": 12,
+    "number": 12,
+    "text": 12,
+    "text:missing": 12
+  }
+}
