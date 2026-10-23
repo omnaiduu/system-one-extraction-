@@ -279,7 +279,31 @@ A wrong amount on this exam is a different money figure. `e3-bills-01` asks for 
 
 The pre-registered fail rule: a head fails when the fresh exam's field exact-match is under 50% and that head has at least 8 fields. Point, number, and calendar fail that test. Spread has 6 fields on this exam, so the count is reported and those 6 fields are not, by themselves, a reason to add a hundred notes. Forecasts are already 0/18 on the training documents, so another pile of the same forecast shape is not what the exact step-snap is missing.
 
-Training is 138 documents. The ceiling for this synthetic set is about 200. The next measured step is the remaining documents, about 62, aimed at point, number, and calendar, plus a fourth 24-document exam written by the same Grok 4.7 and locked before it is scored. Exam 3 will not be scored again to claim that later model improved. Real customer mail is still not on disk.
+Training at that point was 138 documents. The ceiling for this synthetic set is about 200. The measured next step was the remaining documents, about 62, aimed at point, number, and calendar, plus a fourth 24-document exam. Exam 3 is not scored again to claim that later model improved.
+
+## Round 4
+
+Grok 4.7, the normal one, wrote 62 more training documents and a fourth 24-document exam. The auditor kept all 86. None of the ids overlap the original 48, the added 98, or the first three exams. The 62 are training rows only. They were not mixed into val or test. The training set is now 200 documents: the original 40, the 98, and these 62. The fresh exam is `data/exam4/locked.jsonl`. The first three exams were not scored again.
+
+The new training mix, measured by the auditor: 30 text spans, 22 missing text fields, 36 lists, 43 numbers, 63 dates, 6 datetimes, 7 times, 9 durations, 3 estimates, 3 forecasts.
+
+Same heads as round 3, including the question-conditioned document pool. Gemma stays frozen. Same learning rate, same epoch rule. The best training field exact-match arrived at epoch 92, inside an extension from 80 to 100, because the best epoch was still moving near the end of the first budget. The missing threshold stayed 0.5. Random initialization is the "before" column.
+
+| Split | Fields | Before | After | Documents after |
+| --- | --- | --- | --- | --- |
+| Train, 200 docs | 991 | 20/991 | 948/991 | 158/200 |
+| Val, the original 4 | 24 | 0/24 | 4/24 | 0/4 |
+| Fresh exam, 24 docs, scored once | 77 | 6/77 | 9/77 | 0/24 |
+
+By head on this exam: point 8/33, number 0/16, calendar 1/22, spread 0/6. Text fields were 8/21. Lists were 0/12. Dates were 1/20. Amounts were 0/12. Durations were 0/4. Estimates were 0/3. Forecasts were 0/3. No full document was right. On the training documents the same checkpoint scored point 474/478, number 214/216, calendar 253/255, and spread 7/42. Forecast steps on the training documents were 0/21.
+
+The one right date is `e4-series-03`, 4 March 2026. A wrong amount is still a different money figure. `e4-bills-01` asks for 1486.75 and the head wrote 2186.75. `e4-bills-05` asks for a balance of 2825.50 and the head wrote 17.00. `e4-bills-01` asks for 17 March 2026 and the head wrote 4 July 2026.
+
+9/77 and the earlier 15/95 are two different exams, each scored once. The pair does not say the model got worse, and it does not say the extra 62 documents helped. It says the heads still fit the notes they trained on and still miss the amount and the day on a note they have not seen.
+
+Point, number, and calendar are under half, and each has at least 8 fields on this exam. Spread has 6 fields here, so that count is reported and is not a reason to add another hundred forecasts. Forecasts are 0/21 even on the training documents.
+
+200 synthetic training documents is the stop for this set. Another 60 notes of the same shape would teach the same skeleton. The miss is no longer "the head cannot see the document." The head sees the document, fits 214 of 216 training amounts, and writes the wrong amount on every new bill in this exam. Real customer mail is still not on disk.
 
 ## What the blog must not say
 
@@ -288,7 +312,7 @@ Training is 138 documents. The ceiling for this synthetic set is about 200. The 
 - That the writer "just knows the character offsets." It knows the words. The program counts.
 - That 48 audited rows, or a future 30,000 cloned rows, are enough.
 - That estimate and forecast labels are real-world truth. They are rules applied to numbers the writer placed in the document.
-- That any training round is a production accuracy. Round 1 fit 213 of 221 training fields and 29 of 112 exam fields. Round 2 fit 744 of 769 training fields and 14 of 95 fields on a fresh exam. Round 3 fit 720 of 769 training fields and 15 of 95 fields on a third exam. Number and calendar were still right on none of that third exam's dates or amounts.
+- That any training round is a production accuracy. Round 1 fit 213 of 221 training fields and 29 of 112 exam fields. Round 2 fit 744 of 769 training fields and 14 of 95 fields on a fresh exam. Round 3 fit 720 of 769 training fields and 15 of 95 fields on a third exam. Round 4 fit 948 of 991 training fields and 9 of 77 fields on a fourth exam. Amounts on that fourth exam were 0/12. Dates were 1/20.
 - That a passed auditor means the English is diverse. The auditor has no opinion about style. The repeated field shape is a quality bug it cannot see.
 
 ## File map
@@ -303,7 +327,9 @@ Training is 138 documents. The ceiling for this synthetic set is about 200. The 
 - `data/round2/raw/` — 98 added training documents, brackets still present. `data/round2/audited.jsonl` is the measured form. All of it is train. None of it was put into val or test.
 - `data/exam2/raw/` and `data/exam2/locked.jsonl` — the fresh 24-document exam. This is the round 2 claim. The first exam was not scored again.
 - `data/exam3/raw/` and `data/exam3/locked.jsonl` — the third 24-document exam. This is the round 3 claim. The first two exams were not scored again.
-- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/heads_round2.pt` and `outputs/scores_round2.json` are the second run. `outputs/heads_round3.pt` and `outputs/scores_round3.json` are the document-reader run, scored once on exam 3. `outputs/cache/docs/` is the hidden-state cache on disk and is gitignored.
+- `data/round3/raw/` — 62 added training documents, brackets still present. `data/round3/audited.jsonl` is the measured form. All of it is train. None of it was put into val or test.
+- `data/exam4/raw/` and `data/exam4/locked.jsonl` — the fourth 24-document exam. This is the round 4 claim. The first three exams were not scored again.
+- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/heads_round2.pt` and `outputs/scores_round2.json` are the second run. `outputs/heads_round3.pt` and `outputs/scores_round3.json` are the document-reader run, scored once on exam 3. `outputs/heads_round4.pt` and `outputs/scores_round4.json` are the 200-document run, scored once on exam 4. `outputs/cache/docs/` is the hidden-state cache on disk and is gitignored.
 - `blogs/mark-and-measure.md` — this note.
 
 ## Open threads for the essay
