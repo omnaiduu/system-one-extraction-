@@ -1,0 +1,42 @@
+{
+  "kept": 24,
+  "dropped": [],
+  "ids": [
+    "e2-bills-01",
+    "e2-bills-02",
+    "e2-bills-03",
+    "e2-bills-04",
+    "e2-bills-05",
+    "e2-bills-06",
+    "e2-ops-01",
+    "e2-ops-02",
+    "e2-ops-03",
+    "e2-ops-04",
+    "e2-ops-05",
+    "e2-ops-06",
+    "e2-series-01",
+    "e2-series-02",
+    "e2-series-03",
+    "e2-series-04",
+    "e2-series-05",
+    "e2-series-06",
+    "e2-support-01",
+    "e2-support-02",
+    "e2-support-03",
+    "e2-support-04",
+    "e2-support-05",
+    "e2-support-06"
+  ],
+  "fields": {
+    "date": 20,
+    "datetime": 1,
+    "duration": 4,
+    "estimate": 3,
+    "forecast": 3,
+    "list": 12,
+    "number": 12,
+    "text": 31,
+    "text:missing": 8,
+    "time": 1
+  }
+}

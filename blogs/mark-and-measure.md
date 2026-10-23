@@ -238,6 +238,29 @@ The test split has no forecast, no time, and no datetime. Only the exam can spea
 
 Because point, number, and calendar are clearly below half on an exam with enough fields, and spread never fit the training median, the plan's next step is about 100 new training documents aimed at those heads, plus a new 24-document exam. The first exam is not reused to claim that the second model improved.
 
+## Round 2
+
+Grok 4.7, the normal one, wrote 98 more training documents and a fresh 24-document exam. The auditor kept all 122. None of the ids overlap the original 48 or the first exam. The 98 are training rows only. They were not mixed into val or test. The fresh exam is `data/exam2/locked.jsonl`. The first exam was not scored again.
+
+The new training mix, measured by the auditor: 152 text spans, 60 missing text fields, 72 lists, 84 numbers, 124 dates, 12 times, 18 durations, 14 estimates, 12 forecasts.
+
+Same training rule as round 1. Epoch 93 had the highest training field exact-match, 744/769. The missing threshold stayed 0.5. Random initialization is the "before" column.
+
+| Split | Fields | Before | After | Documents after |
+| --- | --- | --- | --- | --- |
+| Train, 138 docs | 769 | 17/769 | 744/769 | 113/138 |
+| Val, the original 4 | 24 | 0/24 | 4/24 | 0/4 |
+| Test, second look at the original 4 | 24 | 0/24 | 4/24 | 0/4 |
+| Fresh exam, 24 docs, scored once | 95 | 3/95 | 14/95 | 0/24 |
+
+By head on the fresh exam: point 14/51, number 0/16, calendar 0/22, spread 0/6. On the training documents, point, number, and calendar were again 100%. Estimates were 8/18 and forecasts 3/18. Text spans on the fresh exam were 13/39. Dates were 0/20. Lists were 1/12. No full document was right.
+
+The test moving from 3/24 to 4/24 is one field on a second look. It is not a new exam.
+
+The number and calendar heads never see the document tokens. They read only the last question token. "Bill date" looks similar from one bill to the next, and the date itself sits in the document tokens those heads do not receive. A head can memorize which training question went with which date, score 159/159 on the training dates, and then write the wrong day on every new bill. The point head is different: it compares the question with every document token, which is why copied text is the only field that moves on a new document. Giving the number and calendar heads the document tokens as well is the next experiment. It is not a claim about this run, and it must be scored on a new exam, not on `data/exam2`.
+
+138 synthetic training documents is the stop. The plan's ceiling was about 200. Another 60 notes of the same kind would teach the same skeleton. The fresh exam still shows a clear miss, and the miss is this readout, not a missing city. Real customer mail is still not on disk.
+
 ## What the blog must not say
 
 - That Cloudflare published Clairic's head code. They published the output types. The four heads are our reading of those types.
@@ -245,7 +268,7 @@ Because point, number, and calendar are clearly below half on an exam with enoug
 - That the writer "just knows the character offsets." It knows the words. The program counts.
 - That 48 audited rows, or a future 30,000 cloned rows, are enough.
 - That estimate and forecast labels are real-world truth. They are rules applied to numbers the writer placed in the document.
-- That the round 1 training score is a production accuracy. Training did run. The heads fit 213 of 221 training fields and 29 of 112 exam fields.
+- That either training round is a production accuracy. Round 1 fit 213 of 221 training fields and 29 of 112 exam fields. Round 2 fit 744 of 769 training fields and 14 of 95 fields on a fresh exam. Number and calendar were perfect on the training dates and amounts, and right on none of the fresh exam's dates or amounts.
 - That a passed auditor means the English is diverse. The auditor has no opinion about style. The repeated field shape is a quality bug it cannot see.
 
 ## File map
@@ -257,7 +280,9 @@ Because point, number, and calendar are clearly below half on an exam with enoug
 - `data/audited/report.json` — counts and drop reasons.
 - `data/generalization/raw/` — the locked 24-document exam, brackets still present. `locked.jsonl` is the audited form.
 - `extractor/labels.py`, `heads.py`, `gemma_cache.py`, `train_heads.py`, `score_heads.py` — question packing, the four heads, the tiny-vocabulary forward, training, and exact-match scoring.
-- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/cache/docs/` is the hidden-state cache on disk and is gitignored.
+- `data/round2/raw/` — 98 added training documents, brackets still present. `data/round2/audited.jsonl` is the measured form. All of it is train. None of it was put into val or test.
+- `data/exam2/raw/` and `data/exam2/locked.jsonl` — the fresh 24-document exam. This is the round 2 claim. The first exam was not scored again.
+- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/heads_round2.pt` and `outputs/scores_round2.json` are the second run. `outputs/cache/docs/` is the hidden-state cache on disk and is gitignored.
 - `blogs/mark-and-measure.md` — this note.
 
 ## Open threads for the essay

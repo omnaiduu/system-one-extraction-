@@ -100,13 +100,21 @@ def val_key(summary: dict) -> tuple:
 
 
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--round", type=int, choices=(1, 2), default=1)
+    args = parser.parse_args()
     random.seed(SEED)
     torch.manual_seed(SEED)
     records = load_records()
     splits = {}
     for record in records:
         splits.setdefault(record["split"], []).append(record)
-    for name in ("train", "val", "test", "generalization"):
+    required = ["train", "val", "test", "generalization"]
+    if args.round == 2:
+        required.append("exam2")
+    for name in required:
         if name not in splits:
             raise RuntimeError(f"cached states are missing the {name} split")
     width = int(splits["train"][0]["doc_states"].shape[-1])
@@ -186,16 +194,17 @@ def main() -> None:
     }
 
     OUT.mkdir(parents=True, exist_ok=True)
+    scored_splits = [name for name in splits if not (args.round == 2 and name == "generalization")]
     apply(initial)
     before = {}
-    for split, rows in splits.items():
-        _, before[split] = evaluate(heads, rows, chosen_threshold)
+    for name in scored_splits:
+        _, before[name] = evaluate(heads, splits[name], chosen_threshold)
     apply(best_state)
     after = {}
     predictions = {}
-    for split, rows in splits.items():
-        scored, after[split] = evaluate(heads, rows, chosen_threshold)
-        predictions[split] = scored
+    for name in scored_splits:
+        scored, after[name] = evaluate(heads, splits[name], chosen_threshold)
+        predictions[name] = scored
     payload = {
         "seed": SEED,
         "epochs_run": epoch,
@@ -211,18 +220,30 @@ def main() -> None:
         "readout": "last question token, because the document is a causal prefix",
         "point_rule": "token span exact; character offsets are also recorded and are often one space wider",
     }
-    (OUT / "scores.json").write_text(json.dumps(payload, indent=2) + "\n")
-    (OUT / "predictions.json").write_text(json.dumps(predictions, indent=2) + "\n")
+    if args.round == 2:
+        payload["round"] = 2
+        payload["claim_split"] = "exam2"
+        payload["note"] = "exam2 is the fresh exam. The first generalization exam is not the improvement claim."
+        score_name = "scores_round2.json"
+        prediction_name = "predictions_round2.json"
+        weight_name = "heads_round2.pt"
+    else:
+        score_name = "scores.json"
+        prediction_name = "predictions.json"
+        weight_name = "heads.pt"
+    (OUT / score_name).write_text(json.dumps(payload, indent=2) + "\n")
+    (OUT / prediction_name).write_text(json.dumps(predictions, indent=2) + "\n")
     torch.save(
         {
             "heads": best_state,
             "width": width,
             "selection": selection,
             "seed": SEED,
+            "round": args.round,
         },
-        OUT / "heads.pt",
+        OUT / weight_name,
     )
-    print("wrote outputs/scores.json outputs/heads.pt", flush=True)
+    print(f"wrote outputs/{score_name} outputs/{weight_name}", flush=True)
 
 
 if __name__ == "__main__":

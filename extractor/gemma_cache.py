@@ -45,10 +45,21 @@ SOURCES = (
 )
 
 
+def source_paths() -> list[tuple[str, Path]]:
+    paths = list(SOURCES)
+    extra = Path("data/round2/audited.jsonl")
+    if extra.exists():
+        paths.append(("train", extra))
+    exam = Path("data/exam2/locked.jsonl")
+    if exam.exists():
+        paths.append(("exam2", exam))
+    return paths
+
+
 def load_rows() -> list[dict]:
     rows = []
     seen = set()
-    for split, path in SOURCES:
+    for split, path in source_paths():
         for line in path.read_text().splitlines():
             if not line.strip():
                 continue
