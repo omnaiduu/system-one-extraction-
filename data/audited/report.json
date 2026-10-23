@@ -1,17 +1,21 @@
 {
-  "kept": 12,
+  "kept": 48,
   "dropped": [],
   "split": {
-    "train": 10,
-    "val": 1,
-    "test": 1
+    "train": 40,
+    "val": 4,
+    "test": 4
   },
   "fields": {
-    "date": 15,
-    "duration": 12,
-    "list": 12,
-    "number": 12,
-    "text": 12,
-    "text:missing": 12
+    "date": 44,
+    "datetime": 5,
+    "duration": 21,
+    "estimate": 6,
+    "forecast": 6,
+    "list": 34,
+    "number": 53,
+    "text": 65,
+    "text:missing": 31,
+    "time": 4
   }
 }

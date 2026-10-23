@@ -121,18 +121,18 @@ The leak check is deliberately fussy. `number_present` looks for the rendered nu
 
 ## What is random, and what is the shift
 
-The situation is chosen by the writer, not rolled by a fact sheet. Each of the twelve kept documents is a different life: a blouse, a goat vet, a dental crown, a damp machiya, a cello. That is the randomization. There is no seed that swaps names inside one skeleton.
+The situation is chosen by the writer, not rolled by a fact sheet. The support file alone has twelve different lives: a blouse, a goat vet, a dental crown, a damp machiya, a cello. The other files add hospital bills, a Colombo repair bench, Kothrud rents, and a Howrah tea stall. That is the randomization. There is no seed that swaps names inside one skeleton.
 
 The label is not random. After the words exist, the program either measures them or drops them.
 
 The **shift** is the thing the student has to survive: the same kind of answer sitting in a new sentence.
 
 - In Hetal's WhatsApp, the job code starts at character 134 and the money is a sum of three payments.
-- In the held-out test letter, `support-10`, Helena in Belo Horizonte writes in Portuguese. The cello contract `BH-5529` sits in a different place. The money is a subtraction, `730.60 - 185.40 = 545.20`. The loan is 72 days, from 20 January 2026 to 2 April 2026. An unmarked decoy, `BH-17` and `318` reais for the case, is in the letter and is not the label.
+- In `support-10`, Helena in Belo Horizonte writes in Portuguese. The cello contract `BH-5529` sits in a different place. The money is a subtraction, `730.60 - 185.40 = 545.20`. The loan is 72 days, from 20 January 2026 to 2 April 2026. An unmarked decoy, `BH-17` and `318` reais for the case, is in the letter and is not the label.
 
-Train, val, and test are whole documents. Fields from one story are never split across the sets, because the model would then be tested on a paragraph it already read. After sorting ids, index mod 10 chooses the bucket: 8 is val, 9 is test, everything else is train. Today that is `support-09` val, `support-10` test, and the other ten in train.
+Train, val, and test are whole documents. Fields from one story are never split across the sets, because the model would then be tested on a paragraph it already read. After sorting ids, index mod 10 chooses the bucket: 8 is val, 9 is test, everything else is train. The current test documents are `bills-10`, `ops-08`, `series-06`, and `support-04`. Val is `bills-09`, `ops-07`, `series-05`, and `support-03`.
 
-This shift is real and still narrow. All twelve are support messages from one writer. A head can memorize the repeated shape: one code, one list, one money calculation, one day count, one date, one missing id. Passing the cello letter does not prove the heads work on a hospital bill or a forecast.
+The shift inside the support file is real and still narrow: a head can memorize "one code, one list, one money calculation, one day count, one missing id." The bills, ops, and series files are the wider shift. A hospital sheet with a computed due date, a Colombo repair card with hours times a rate, and a Pune rent comparison are not Hetal's WhatsApp. Passing those is a better exam. It is still one writer's batch per file, not a real inbox.
 
 ## Calculated answers the search cannot see
 
@@ -142,7 +142,7 @@ These are specified in `ask` and implemented in the auditor. The writer marks on
 - `product` of a left mark and a right mark, such as hours times a rate.
 - `subtract` of left minus right, such as a deposit minus a fee.
 - `days_between` two date marks. The day count must not be printed.
-- `add_days` on a calendar field. "Issued 2 Sep 2026, net 30" becomes `2026-10-02`, and that ISO date must not appear in the text. This is the Clairic "net 30" case. No such row has been kept yet. The bills file that was meant to hold them never landed on disk.
+- `add_days` on a calendar field. "Credit runs 14 days from 2 Apr 2026" becomes `2026-04-16`, and that due date is not printed. This is the Clairic "net 30" case. `bills-01` is one kept example: Bhosale Memorial Hospital, admitted `2026-04-02T14:30`, pay-by computed as 16 April 2026.
 - `estimate`: an even number of `comp` marks, at least four. Gold is the average of the two middle values after sorting, quantized. An even count is deliberate. With three prices the median is one of the prices, and the head can cheat by copying the middle line. The median must sit inside `min` and `max` and must not be printed.
 - `forecast`: each observation is `[[obs]]YYYY-MM-DD|value[[/]]` on its own line. The auditor deletes the last `horizon` lines from the student text and saves those values as the label. The history stays. The hidden numbers must not appear in the history or the intro. The answer is absent on purpose. Code does not "find" it in the student text. It held it back.
 
@@ -170,33 +170,42 @@ Not started. The intended loop, when a row is honest:
 2. Point head: loss on the start token and the end token of each gold slice, in order for lists, and a missing score when the gold is null. A predicted slice of `HT-908` is a miss.
 3. Number head: loss on the digits of `2413.25` and of `15`, one shot, not a written sentence. Evidence spans can be an auxiliary target. They are not the answer.
 4. Calendar head: loss on year, month, and day as legal choices. Month 13 is not in the output space.
-5. Spread head: loss on the bin of the median, or on each withheld forecast step. No rows for this head exist yet, so it cannot be trained from this folder.
-6. Score the heads on `support-10` only after training. That letter was not in the training file.
+5. Spread head: loss on the bin of the median, or on each withheld forecast step. Six estimates and six forecasts are in the audited set.
+6. Score the heads on the four test documents only after training: `bills-10`, `ops-08`, `series-06`, and `support-04`. Those documents are not in the training file.
 
 Confidence comes later. A sharp softmax is not a probability until it is checked on documents the generator never saw, including real ones. Clairic says the same thing in their preview notes: intervals can run narrow on unfamiliar data.
 
 ## Quality of the data on disk today
 
-`data/audited/report.json` after the only successful writer:
+Four writers, four files, all audited together. `data/audited/report.json`:
 
-- 12 kept, 0 dropped, from `data/raw/support.jsonl`.
-- 10 train, 1 val, 1 test.
-- Field counts: 15 dates, 12 durations, 12 lists, 12 numbers, 12 text spans, 12 missing text fields.
-- No time, datetime, add-days, estimate, or forecast rows.
-- Three other writers (bills, ops, series) reported files that are not on disk. They are not part of the dataset. Do not describe them as kept.
+- 48 kept, 0 dropped.
+- 40 train, 4 val, 4 test.
+- Fields: 65 text spans, 31 missing text fields, 34 lists, 53 numbers, 44 dates, 4 times, 5 datetimes, 21 durations, 6 estimates, 6 forecasts.
 
-The labels that exist match the text. The sums and the day counts were produced by the auditor. The prose is specific.
+Every head now has gold. The spread head has six rent-or-price comparisons and six withheld series. The number head has printed amounts, sums, products, and subtractions. The calendar head has quoted dates, times, datetimes, and due dates computed with `add_days`.
 
-The shape is too regular, and the set is too small to train the four heads. Twelve checked messages prove the checker. They do not prove a model. More volume is justified only after new document types pass the same auditor. Copying Hetal's skeleton with new numbers would inflate the count and teach the skeleton.
+Checked examples worth quoting:
 
-Real customer mail is still required before anyone calls the heads production-ready. This pipeline cannot invent that mail. A few hundred real documents, run through the same measurement rules where the evidence can be marked, are the actual shift that matters.
+- `series-01`: six Kothrud rents, gold median `25375`, and that number is not in the prose.
+- `series-07`: cup counts beside Howrah. The student text keeps 40, 42, 38, 55. The label is the hidden tail, 61 then 63.
+- `ops-02`: 6 hours at 850 rupees. Gold labour is `5100`, a product. Quote `Q-77` said 2200 and is a decoy.
+- `bills-01`: ancillary charges sum to `4331.85`. Pay-by is 16 April 2026, computed, not printed. The grand total `9149.20` is printed, so it is a copy label, not a sum label.
+
+The labels match the text because the auditor built them. The prose is specific: Pune, Colombo, Howrah, Belo Horizonte.
+
+The set is still a pilot. Forty training documents can show a head move. They cannot settle it. Within the support file the field shape repeats. The four files came from four separate writer passes, so the variety is real and still one voice per file. Copying any of them with new numbers would inflate the count and teach the skeleton.
+
+Real customer mail is still required before anyone calls the heads production-ready. This pipeline cannot invent that mail. A few hundred real documents, run through the same measurement rules where the evidence can be marked, are the shift that matters.
+
+One operational miss belongs in the engineering notes, not in the method. Each writer committed its file on its own git branch. A checkout of the support branch showed only `support.jsonl`, which looked like the other files had never been written. They had. The auditor has to be run on the assembled `data/raw/*.jsonl`, not on whichever branch the workspace happens to be sitting on.
 
 ## What the blog must not say
 
 - That Cloudflare published Clairic's head code. They published the output types. The four heads are our reading of those types.
 - That Mark and Measure is how NVIDIA or Google builds data. They do SDG with validators. The bracket-and-measure step is this project's method.
 - That the writer "just knows the character offsets." It knows the words. The program counts.
-- That 12 rows, or a future 30,000 cloned rows, are enough.
+- That 48 audited rows, or a future 30,000 cloned rows, are enough.
 - That estimate and forecast labels are real-world truth. They are rules applied to numbers the writer placed in the document.
 - That training has happened.
 - That a passed auditor means the English is diverse. The auditor has no opinion about style. The repeated field shape is a quality bug it cannot see.
@@ -205,7 +214,7 @@ Real customer mail is still required before anyone calls the heads production-re
 
 - `extractor/audit.py` — the measuring program.
 - `tests/test_audit.py` — spans, leaked sums, date shift, even-comp median, forecast tail removal, and the keep/drop split.
-- `data/raw/support.jsonl` — writer output, brackets still present.
+- `data/raw/support.jsonl`, `bills.jsonl`, `ops.jsonl`, `series.jsonl` — writer output, brackets still present. 12 documents each.
 - `data/audited/train.jsonl`, `val.jsonl`, `test.jsonl` — clean text and measured labels.
 - `data/audited/report.json` — counts and drop reasons.
 - `blogs/mark-and-measure.md` — this note.
@@ -213,8 +222,8 @@ Real customer mail is still required before anyone calls the heads production-re
 ## Open threads for the essay
 
 - Show the bracketed Hetal message and the clean training row side by side. That pair is the whole method.
-- Then show the cello letter as the shift: new language, new position, subtraction instead of a sum, same heads.
+- Then show a shift that is not another WhatsApp: the Colombo repair card (`6 × 850 = 5100`, with the 2200 quote left unmarked) or the Howrah cups, where 61 and 63 are deleted from the student text.
 - Name the prior art in a short paragraph so the coinage stays honest.
 - Spend time on the leak rule and the decoy. Those two are the difference between a labeled story and a labeled exam.
-- Say plainly that the spread head is designed and unfed.
+- The spread head is fed, and its gold is a rule: a median, or a withheld tail. Say that before anyone reads it as a price the market produced.
 - End on the limit: the program can certify a label inside a document it can parse. It cannot certify that the document looks like the user's real inbox.
