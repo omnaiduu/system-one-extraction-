@@ -49,18 +49,19 @@ def predict_question(heads: dict, question: dict, doc_states: torch.Tensor, thre
         start = int(outputs["start"].argmax(dim=-1)[0])
         end = int(outputs["end"].argmax(dim=-1)[0])
         return {"missing": missing, "start": start, "end": end}
+    document = doc_states.detach().float().unsqueeze(0)
     if question["head"] == "number":
-        outputs = heads["number"](query)
+        outputs = heads["number"](document, query)
         sign = int(outputs["sign"].argmax(dim=-1)[0])
         whole = [int(item) for item in outputs["whole"].argmax(dim=-1)[0]]
         frac = [int(item) for item in outputs["frac"].argmax(dim=-1)[0]]
         encoded = {"sign": sign, "whole": whole, "frac": frac, "decimals": question["target"]["decimals"]}
         return {"number": join_number(encoded)}
     if question["head"] == "calendar":
-        outputs = heads["calendar"](query)
+        outputs = heads["calendar"](document, query)
         indexes = _argmax_dict(outputs)
         return {"text": calendar_string(question["kind"], indexes)}
-    outputs = heads["spread"](query)
+    outputs = heads["spread"](document, query)
     mean = float(outputs["mean"][0].detach())
     width = float(outputs["width"][0].detach())
     low = float(question["min"])

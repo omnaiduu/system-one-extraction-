@@ -61,15 +61,15 @@ def _batch_target(question: dict, key: str) -> torch.Tensor:
 
 def loss_on(heads: dict, record: dict, question: dict) -> torch.Tensor:
     query = question["q_state"].float().unsqueeze(0)
+    document = record["doc_states"].float().unsqueeze(0)
     if question["head"] == "point":
-        document = record["doc_states"].float().unsqueeze(0)
         outputs = heads["point"](document, query)
         missing = torch.tensor([1 if question["missing"] else 0], dtype=torch.long)
         start = torch.tensor([question["start"]], dtype=torch.long)
         end = torch.tensor([question["end"]], dtype=torch.long)
         return point_loss(outputs, missing, start, end)
     if question["head"] == "number":
-        outputs = heads["number"](query)
+        outputs = heads["number"](document, query)
         target = {
             "sign": _batch_target(question, "sign"),
             "whole": torch.tensor([question["target"]["whole"]], dtype=torch.long),
@@ -77,13 +77,13 @@ def loss_on(heads: dict, record: dict, question: dict) -> torch.Tensor:
         }
         return number_loss(outputs, target)
     if question["head"] == "calendar":
-        outputs = heads["calendar"](query)
+        outputs = heads["calendar"](document, query)
         target = {
             name: None if question["target"][name] is None else torch.tensor([question["target"][name]], dtype=torch.long)
             for name in ("year", "month", "day", "hour", "minute")
         }
         return calendar_loss(outputs, target, question["kind"])
-    outputs = heads["spread"](query)
+    outputs = heads["spread"](document, query)
     return spread_loss(outputs, torch.tensor([question["norm"]], dtype=torch.float32))
 
 
@@ -103,7 +103,8 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--round", type=int, choices=(1, 2), default=1)
+    parser.add_argument("--round", type=int, choices=(1, 2, 3, 4), default=1)
+    parser.add_argument("--score-only", action="store_true")
     args = parser.parse_args()
     random.seed(SEED)
     torch.manual_seed(SEED)
@@ -111,15 +112,49 @@ def main() -> None:
     splits = {}
     for record in records:
         splits.setdefault(record["split"], []).append(record)
-    required = ["train", "val", "test", "generalization"]
+    required = ["train", "val"]
+    if args.round < 3:
+        required.extend(["test", "generalization"])
     if args.round == 2:
         required.append("exam2")
+    claim = {3: "exam3", 4: "exam4"}.get(args.round)
+    if args.round == 4 or args.score_only:
+        if claim is None:
+            raise RuntimeError("score-only is for round 3 or round 4")
+        required.append(claim)
     for name in required:
         if name not in splits:
             raise RuntimeError(f"cached states are missing the {name} split")
     width = int(splits["train"][0]["doc_states"].shape[-1])
     heads = build_heads(width)
     initial = {name: {key: value.detach().clone() for key, value in head.state_dict().items()} for name, head in heads.items()}
+    if args.score_only:
+        weight_name = f"heads_round{args.round}.pt"
+        score_name = f"scores_round{args.round}.json"
+        prediction_name = f"predictions_round{args.round}.json"
+        checkpoint = torch.load(OUT / weight_name, weights_only=False)
+        threshold = checkpoint["selection"]["threshold"]
+        for head in heads.values():
+            head.eval()
+        _, before_exam = evaluate(heads, splits[claim], threshold)
+        for name, head in heads.items():
+            head.load_state_dict(checkpoint["heads"][name])
+            head.eval()
+        scored, after_exam = evaluate(heads, splits[claim], threshold)
+        payload = json.loads((OUT / score_name).read_text())
+        predictions = json.loads((OUT / prediction_name).read_text())
+        payload.setdefault("before", {})[claim] = before_exam
+        payload.setdefault("after", {})[claim] = after_exam
+        payload["claim_split"] = claim
+        predictions[claim] = scored
+        (OUT / score_name).write_text(json.dumps(payload, indent=2) + "\n")
+        (OUT / prediction_name).write_text(json.dumps(predictions, indent=2) + "\n")
+        print(
+            f"{claim} fields {after_exam['fields']['exact']:.3f} "
+            f"docs {after_exam['documents']['exact']:.3f}",
+            flush=True,
+        )
+        return
     parameters = [param for head in heads.values() for param in head.parameters()]
     optimizer = torch.optim.AdamW(parameters, lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     history = []
@@ -194,7 +229,14 @@ def main() -> None:
     }
 
     OUT.mkdir(parents=True, exist_ok=True)
-    scored_splits = [name for name in splits if not (args.round == 2 and name == "generalization")]
+    if args.round == 4:
+        scored_splits = [name for name in ("train", "val", "exam4") if name in splits]
+    elif args.round == 3:
+        scored_splits = [name for name in ("train", "val", "exam3") if name in splits]
+    elif args.round == 2:
+        scored_splits = [name for name in splits if name != "generalization"]
+    else:
+        scored_splits = list(splits)
     apply(initial)
     before = {}
     for name in scored_splits:
@@ -217,10 +259,28 @@ def main() -> None:
         "after": after,
         "history": history,
         "weights": "public Hugging Face google/gemma-4-E2B-it; no Kaggle token was on this machine",
-        "readout": "last question token, because the document is a causal prefix",
+        "readout": (
+            "number, calendar, and spread add a question-conditioned pool of the document tokens to the question vector"
+            if args.round >= 3
+            else "last question token, because the document is a causal prefix"
+        ),
         "point_rule": "token span exact; character offsets are also recorded and are often one space wider",
     }
-    if args.round == 2:
+    if args.round == 4:
+        payload["round"] = 4
+        payload["claim_split"] = "exam4" if "exam4" in after else None
+        payload["note"] = "exam4 is the claim. The first three exams are not scored again."
+        score_name = "scores_round4.json"
+        prediction_name = "predictions_round4.json"
+        weight_name = "heads_round4.pt"
+    elif args.round == 3:
+        payload["round"] = 3
+        payload["claim_split"] = "exam3" if "exam3" in after else None
+        payload["note"] = "exam3 is the claim. The first two exams are not scored again."
+        score_name = "scores_round3.json"
+        prediction_name = "predictions_round3.json"
+        weight_name = "heads_round3.pt"
+    elif args.round == 2:
         payload["round"] = 2
         payload["claim_split"] = "exam2"
         payload["note"] = "exam2 is the fresh exam. The first generalization exam is not the improvement claim."

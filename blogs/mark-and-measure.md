@@ -257,9 +257,29 @@ By head on the fresh exam: point 14/51, number 0/16, calendar 0/22, spread 0/6. 
 
 The test moving from 3/24 to 4/24 is one field on a second look. It is not a new exam.
 
-The number and calendar heads never see the document tokens. They read only the last question token. "Bill date" looks similar from one bill to the next, and the date itself sits in the document tokens those heads do not receive. A head can memorize which training question went with which date, score 159/159 on the training dates, and then write the wrong day on every new bill. The point head is different: it compares the question with every document token, which is why copied text is the only field that moves on a new document. Giving the number and calendar heads the document tokens as well is the next experiment. It is not a claim about this run, and it must be scored on a new exam, not on `data/exam2`.
+The number and calendar heads in that run never saw the document tokens. They read only the last question token. "Bill date" looks similar from one bill to the next, and the date itself sits in the document tokens those heads did not receive. A head can memorize which training question went with which date, score 159/159 on the training dates, and then write the wrong day on every new bill. The point head is different: it compares the question with every document token, which is why copied text was the only field that moved on a new document.
 
-138 synthetic training documents is the stop. The plan's ceiling was about 200. Another 60 notes of the same kind would teach the same skeleton. The fresh exam still shows a clear miss, and the miss is this readout, not a missing city. Real customer mail is still not on disk.
+## Round 3
+
+Number, calendar, and spread now pool the document tokens with weights that depend on the question. The pool is a small attention block: LayerNorm on the document and on the question, a query and a key of width 64, a value of the full 1536-wide state, scores scaled by `1/sqrt(64)`, then softmax. That pool is added to the question vector, LayerNorm is applied again, and the same small network writes the digits, the calendar indexes, or the mean and width. The point head already compared the question with every document token, so it was left as it was. Gemma stays frozen. Thinking stays off. The training documents are still the same 138. The epoch rule and the learning rate are unchanged.
+
+Epoch 73 of 80 had the highest training field exact-match, 720/769. The run did not extend, because that epoch was not inside the last 5 of the budget. The missing threshold stayed 0.5. Random initialization is the "before" column.
+
+| Split | Fields | Before | After | Documents after |
+| --- | --- | --- | --- | --- |
+| Train, 138 docs | 769 | 15/769 | 720/769 | 90/138 |
+| Val, the original 4 | 24 | 0/24 | 5/24 | 0/4 |
+| Fresh exam, 24 docs, scored once | 95 | 3/95 | 15/95 | 0/24 |
+
+The claim is `data/exam3/locked.jsonl`. The auditor kept all 24. None of the ids overlap the original 48, the added 98, or the first two exams. Exam 1 and exam 2 were not scored again. The original test was not scored again.
+
+By head on this exam: point 14/51, number 0/16, calendar 0/22, spread 1/6. Text spans were 14/39. Lists were 0/12. Dates were 0/20. Copied and calculated amounts were 0/12. Durations were 0/4. Estimates were 1/3. Forecasts were 0/3. No full document was right. On the training documents the same checkpoint scored point 390/390, number 156/164, calendar 169/179, and spread 5/36. Forecast steps on the training documents were 0/18.
+
+A wrong amount on this exam is a different money figure. `e3-bills-01` asks for 1460.75 and the head wrote 22.00. A wrong date is a different day, still in 2026 or 2027. `e3-bills-01` asks for 2026-08-11 and the head wrote 2027-06-14. On a training bill the head can also swap two dates that share a document: `bills-01` billed_on was predicted as 2026-04-16, which is that same bill's pay-by date, while pay-by itself was right. Seeing the document tokens was not enough for the head to pick the asked amount or the asked day on a new note.
+
+The pre-registered fail rule: a head fails when the fresh exam's field exact-match is under 50% and that head has at least 8 fields. Point, number, and calendar fail that test. Spread has 6 fields on this exam, so the count is reported and those 6 fields are not, by themselves, a reason to add a hundred notes. Forecasts are already 0/18 on the training documents, so another pile of the same forecast shape is not what the exact step-snap is missing.
+
+Training is 138 documents. The ceiling for this synthetic set is about 200. The next measured step is the remaining documents, about 62, aimed at point, number, and calendar, plus a fourth 24-document exam written by the same Grok 4.7 and locked before it is scored. Exam 3 will not be scored again to claim that later model improved. Real customer mail is still not on disk.
 
 ## What the blog must not say
 
@@ -268,7 +288,7 @@ The number and calendar heads never see the document tokens. They read only the 
 - That the writer "just knows the character offsets." It knows the words. The program counts.
 - That 48 audited rows, or a future 30,000 cloned rows, are enough.
 - That estimate and forecast labels are real-world truth. They are rules applied to numbers the writer placed in the document.
-- That either training round is a production accuracy. Round 1 fit 213 of 221 training fields and 29 of 112 exam fields. Round 2 fit 744 of 769 training fields and 14 of 95 fields on a fresh exam. Number and calendar were perfect on the training dates and amounts, and right on none of the fresh exam's dates or amounts.
+- That any training round is a production accuracy. Round 1 fit 213 of 221 training fields and 29 of 112 exam fields. Round 2 fit 744 of 769 training fields and 14 of 95 fields on a fresh exam. Round 3 fit 720 of 769 training fields and 15 of 95 fields on a third exam. Number and calendar were still right on none of that third exam's dates or amounts.
 - That a passed auditor means the English is diverse. The auditor has no opinion about style. The repeated field shape is a quality bug it cannot see.
 
 ## File map
@@ -282,7 +302,8 @@ The number and calendar heads never see the document tokens. They read only the 
 - `extractor/labels.py`, `heads.py`, `gemma_cache.py`, `train_heads.py`, `score_heads.py` — question packing, the four heads, the tiny-vocabulary forward, training, and exact-match scoring.
 - `data/round2/raw/` — 98 added training documents, brackets still present. `data/round2/audited.jsonl` is the measured form. All of it is train. None of it was put into val or test.
 - `data/exam2/raw/` and `data/exam2/locked.jsonl` — the fresh 24-document exam. This is the round 2 claim. The first exam was not scored again.
-- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/heads_round2.pt` and `outputs/scores_round2.json` are the second run. `outputs/cache/docs/` is the hidden-state cache on disk and is gitignored.
+- `data/exam3/raw/` and `data/exam3/locked.jsonl` — the third 24-document exam. This is the round 3 claim. The first two exams were not scored again.
+- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/heads_round2.pt` and `outputs/scores_round2.json` are the second run. `outputs/heads_round3.pt` and `outputs/scores_round3.json` are the document-reader run, scored once on exam 3. `outputs/cache/docs/` is the hidden-state cache on disk and is gitignored.
 - `blogs/mark-and-measure.md` — this note.
 
 ## Open threads for the essay

@@ -53,6 +53,15 @@ def source_paths() -> list[tuple[str, Path]]:
     exam = Path("data/exam2/locked.jsonl")
     if exam.exists():
         paths.append(("exam2", exam))
+    exam3 = Path("data/exam3/locked.jsonl")
+    if exam3.exists():
+        paths.append(("exam3", exam3))
+    round3 = Path("data/round3/audited.jsonl")
+    if round3.exists():
+        paths.append(("train", round3))
+    exam4 = Path("data/exam4/locked.jsonl")
+    if exam4.exists():
+        paths.append(("exam4", exam4))
     return paths
 
 

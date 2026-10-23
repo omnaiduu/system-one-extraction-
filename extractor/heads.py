@@ -34,14 +34,40 @@ class PointHead(nn.Module):
         return {"start": start, "end": end, "missing": self.missing(question).squeeze(-1)}
 
 
+class DocumentReader(nn.Module):
+    """Pool document tokens with weights that depend on the question.
+
+    A date or an amount lives in the document. The question only says which
+    field is being asked. Adding this pool to the question vector lets the
+    number, calendar, and spread heads see those tokens.
+    """
+
+    def __init__(self, width: int, inner: int = 64) -> None:
+        super().__init__()
+        self.doc_norm = nn.LayerNorm(width)
+        self.query_norm = nn.LayerNorm(width)
+        self.query = nn.Linear(width, inner)
+        self.key = nn.Linear(width, inner)
+        self.value = nn.Linear(width, width)
+        self.scale = inner ** -0.5
+
+    def forward(self, document: torch.Tensor, question: torch.Tensor) -> torch.Tensor:
+        document = self.doc_norm(document)
+        question = self.query_norm(question)
+        scores = torch.einsum("bh,bth->bt", self.query(question), self.key(document)) * self.scale
+        weights = torch.softmax(scores, dim=-1)
+        return torch.einsum("bt,bth->bh", weights, self.value(document))
+
+
 class NumberHead(nn.Module):
     def __init__(self, width: int) -> None:
         super().__init__()
+        self.reader = DocumentReader(width)
         self.norm = nn.LayerNorm(width)
         self.net = nn.Sequential(nn.Linear(width, 128), nn.GELU(), nn.Linear(128, 2 + INT_DIGITS * 10 + 20))
 
-    def forward(self, question: torch.Tensor) -> dict[str, torch.Tensor]:
-        raw = self.net(self.norm(question))
+    def forward(self, document: torch.Tensor, question: torch.Tensor) -> dict[str, torch.Tensor]:
+        raw = self.net(self.norm(question + self.reader(document, question)))
         sign = raw[:, :2]
         cursor = 2
         whole = raw[:, cursor:cursor + INT_DIGITS * 10].view(-1, INT_DIGITS, 10)
@@ -53,11 +79,12 @@ class NumberHead(nn.Module):
 class CalendarHead(nn.Module):
     def __init__(self, width: int) -> None:
         super().__init__()
+        self.reader = DocumentReader(width)
         self.norm = nn.LayerNorm(width)
         self.net = nn.Sequential(nn.Linear(width, 128), nn.GELU(), nn.Linear(128, YEAR_SPAN + 12 + 31 + 24 + 60))
 
-    def forward(self, question: torch.Tensor) -> dict[str, torch.Tensor]:
-        raw = self.net(self.norm(question))
+    def forward(self, document: torch.Tensor, question: torch.Tensor) -> dict[str, torch.Tensor]:
+        raw = self.net(self.norm(question + self.reader(document, question)))
         cuts = [YEAR_SPAN, 12, 31, 24, 60]
         pieces = {}
         cursor = 0
@@ -70,11 +97,12 @@ class CalendarHead(nn.Module):
 class SpreadHead(nn.Module):
     def __init__(self, width: int) -> None:
         super().__init__()
+        self.reader = DocumentReader(width)
         self.norm = nn.LayerNorm(width)
         self.net = nn.Sequential(nn.Linear(width, 64), nn.GELU(), nn.Linear(64, 2))
 
-    def forward(self, question: torch.Tensor) -> dict[str, torch.Tensor]:
-        raw = self.net(self.norm(question))
+    def forward(self, document: torch.Tensor, question: torch.Tensor) -> dict[str, torch.Tensor]:
+        raw = self.net(self.norm(question + self.reader(document, question)))
         mean = torch.sigmoid(raw[:, 0])
         width_score = torch.nn.functional.softplus(raw[:, 1]) + 1e-3
         return {"mean": mean, "width": width_score}
