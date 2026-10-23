@@ -1,0 +1,43 @@
+{
+  "kept": 24,
+  "dropped": [],
+  "ids": [
+    "e4-bills-01",
+    "e4-bills-02",
+    "e4-bills-03",
+    "e4-bills-04",
+    "e4-bills-05",
+    "e4-bills-06",
+    "e4-ops-01",
+    "e4-ops-02",
+    "e4-ops-03",
+    "e4-ops-04",
+    "e4-ops-05",
+    "e4-ops-06",
+    "e4-series-01",
+    "e4-series-02",
+    "e4-series-03",
+    "e4-series-04",
+    "e4-series-05",
+    "e4-series-06",
+    "e4-support-01",
+    "e4-support-02",
+    "e4-support-03",
+    "e4-support-04",
+    "e4-support-05",
+    "e4-support-06"
+  ],
+  "fields": {
+    "date": 20,
+    "datetime": 1,
+    "duration": 4,
+    "estimate": 3,
+    "forecast": 3,
+    "list": 12,
+    "number": 12,
+    "text": 13,
+    "text:missing": 8,
+    "time": 1
+  },
+  "note": "fourth exam. Not used to train. The first three exams are not the claim."
+}
