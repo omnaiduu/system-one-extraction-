@@ -49,7 +49,7 @@ Keep these separate in the writing. Collapsing them is how the method gets misun
 
 1. **Writer.** Grok 4.7 invents a situation a person might actually send: a blouse job in Vadodara, a cello complaint in Belo Horizonte. It wraps evidence in `[[name]]words[[/]]`. It does not report character numbers. It does not write the sum, the day count, the due date, the median, or the forecast that the student is supposed to learn.
 2. **Auditor.** `extractor/audit.py` strips the brackets, checks the slice, parses dates and amounts, computes the derived answers, and drops the whole document on failure. It has no taste and no memory of the story.
-3. **Student.** Gemma 4 E2B, later, frozen, with small heads. It sees the clean text and the questions. It never sees a bracket. Training has not been run.
+3. **Student.** Gemma 4 E2B, frozen, with small heads. It sees the clean text and the questions. It never sees a bracket. Round 1 has been trained. The numbers are in the section below. They are not a production score.
 
 The fascination people feel is the handoff. The writer knows which words are the evidence because it chose them. The program knows where they sit because it counted after the brackets were removed. Neither is asked to do the other's job.
 
@@ -200,6 +200,44 @@ Real customer mail is still required before anyone calls the heads production-re
 
 One operational miss belongs in the engineering notes, not in the method. Each writer committed its file on its own git branch. A checkout of the support branch showed only `support.jsonl`, which looked like the other files had never been written. They had. The auditor has to be run on the assembled `data/raw/*.jsonl`, not on whichever branch the workspace happens to be sitting on.
 
+## Round 1, what actually ran
+
+The audited 48 stayed frozen. A separate 24-document exam was written by Grok 4.7 (the normal one, not a fast variant), audited 24 kept and 0 dropped, and stored at `data/generalization/`. It was not used to train and not used to pick the epoch.
+
+No Kaggle token was on this machine. `~/.kaggle` was missing, and the environment had no Kaggle variable. The same public model, `google/gemma-4-E2B-it`, was read from the Hugging Face snapshot already on disk. The checkpoint file is 10.2GB. This machine has no GPU and about 6GB free RAM, so the full file cannot be loaded.
+
+The forward that did run:
+
+- Tokenize every document first. The 72 documents used 2,721 distinct token ids, not the 262,144-row tables.
+- Copy only those rows out of `embed_tokens` and `embed_tokens_per_layer`. The per-layer table is the expensive one: each row is 35 × 256. Copying 2,721 rows is about 50MB. Copying the whole table would be about 4.7GB.
+- Copy the text-tower layer weights, about 2.5GB in bf16, into a `Gemma4TextModel` whose vocabulary is those 2,721 rows. The raw rows are copied. The embedding module still multiplies by `sqrt(hidden)` in its forward. Do not bake that scale into the copied rows.
+- The document is the causal prefix and every question is packed after it. One forward per document is enough, because a later question cannot change the document's hidden states. The head reads the last token of the question, the token that has seen the document and the whole question.
+- A forward of a few hundred tokens took under a second on four CPU cores. Cached states are in `outputs/cache/docs/` and are not committed.
+
+Two measurement facts that are easy to miss:
+
+- Gemma's tokenizer often glues the preceding space onto the first piece of an answer. On the audited point spans, 135 of 160 gold character spans begin in the middle of a token. The covering token text, with whitespace stripped, still equals the gold string in every one of those 160. The head is trained on the covering token indexes. Scores report token exact, stripped-text exact, and raw character-offset exact separately. Character-offset exact stays low. That is the tokenizer, not a miss.
+- Lists become "Item 1", "Item 2", and one extra item whose correct answer is missing. Forecast steps become "Step 1", "Step 2". A field is correct only when every one of those questions is correct. A document is correct only when every field is correct.
+
+The point head's first loss was about 88 per question. Gemma's states have standard deviation around 4, and an unnormalized dot product over 64 dimensions then has logits hundreds wide. Cross-entropy against the wrong token becomes huge, and the step barely moves. The fix, chosen before the scored run, is a LayerNorm on the states plus the usual `1/sqrt(inner)` scale on the start and end scores. After that, the initial point loss was about 8, and training field exact-match climbed past 90%.
+
+The spread loss is a Gaussian negative log likelihood. It can keep falling forever if the width shrinks, even when the snapped number is already wrong. The saved epoch is the earliest epoch with the highest training field exact-match, not the lowest loss. Validation was not used to pick the epoch. Four documents are too few: one field is 4% of the score. Validation only picked the missing threshold from 0.5, 0.3, and 0.7. The chosen threshold was 0.5.
+
+Round 1 scores, field exact-match, after that frozen choice. The "before" column is the same heads at random initialization.
+
+| Split | Fields | Before | After | Documents after |
+| --- | --- | --- | --- | --- |
+| Train, 40 docs | 221 | 6/221 | 213/221 | 32/40 |
+| Val, 4 docs | 24 | 0/24 | 4/24 | 0/4 |
+| Test, 4 docs, scored once | 24 | 0/24 | 3/24 | 0/4 |
+| Generalization exam, 24 docs, scored once | 112 | 3/112 | 29/112 | 0/24 |
+
+By head on the exam: point 17/59, number 2/19, calendar 10/28, spread 0/6. On the training documents the point, number, and calendar fields were 100%. The spread fields were 2/10. The heads memorized the forty documents. They did not carry the skill to new cities. The same-source test, 3/24, says the same thing. Do not quote the 213/221 training number as accuracy.
+
+The test split has no forecast, no time, and no datetime. Only the exam can speak for those. The original 48 are still the only same-source set. Real customer mail is still not on disk.
+
+Because point, number, and calendar are clearly below half on an exam with enough fields, and spread never fit the training median, the plan's next step is about 100 new training documents aimed at those heads, plus a new 24-document exam. The first exam is not reused to claim that the second model improved.
+
 ## What the blog must not say
 
 - That Cloudflare published Clairic's head code. They published the output types. The four heads are our reading of those types.
@@ -207,7 +245,7 @@ One operational miss belongs in the engineering notes, not in the method. Each w
 - That the writer "just knows the character offsets." It knows the words. The program counts.
 - That 48 audited rows, or a future 30,000 cloned rows, are enough.
 - That estimate and forecast labels are real-world truth. They are rules applied to numbers the writer placed in the document.
-- That training has happened.
+- That the round 1 training score is a production accuracy. Training did run. The heads fit 213 of 221 training fields and 29 of 112 exam fields.
 - That a passed auditor means the English is diverse. The auditor has no opinion about style. The repeated field shape is a quality bug it cannot see.
 
 ## File map
@@ -217,6 +255,9 @@ One operational miss belongs in the engineering notes, not in the method. Each w
 - `data/raw/support.jsonl`, `bills.jsonl`, `ops.jsonl`, `series.jsonl` — writer output, brackets still present. 12 documents each.
 - `data/audited/train.jsonl`, `val.jsonl`, `test.jsonl` — clean text and measured labels.
 - `data/audited/report.json` — counts and drop reasons.
+- `data/generalization/raw/` — the locked 24-document exam, brackets still present. `locked.jsonl` is the audited form.
+- `extractor/labels.py`, `heads.py`, `gemma_cache.py`, `train_heads.py`, `score_heads.py` — question packing, the four heads, the tiny-vocabulary forward, training, and exact-match scoring.
+- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/cache/docs/` is the hidden-state cache on disk and is gitignored.
 - `blogs/mark-and-measure.md` — this note.
 
 ## Open threads for the essay

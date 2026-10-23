@@ -1,0 +1,77 @@
+Mark and Measure writer contract. The auditor in extractor/audit.py is the judge. You invent the situation. You do not invent the character offsets or the calculated answer.
+
+Write JSONL. One JSON object per line. UTF-8. No markdown.
+
+Each object:
+{"id": "...", "genre": "short label", "banned": [], "marked_text": "...", "ask": [ ... ]}
+
+Brackets: [[name]]inner[[/]]
+No nesting. No empty inner. The name is lowercase letters, digits, underscores. Do not put [[ inside an inner. Every [[/]] closes one mark.
+
+The program deletes the brackets, checks that the words between them are exactly the slice, and then calculates. If a calculated answer is also printed in the text, the whole document is thrown away.
+
+Ask types you may use:
+
+1. Copied text. One mark, used once.
+{"name":"vendor","type":"text","instruction":"Who sent the bill","mark":"vendor"}
+[[vendor]]Bhosale Memorial[[/]]
+
+2. Missing text. No mark. Name a decoy string that must NOT appear.
+{"name":"insurer","type":"text","instruction":"Insurer reference","mark":null,"must_not_contain":["INS-440"]}
+
+3. List. Same mark repeated, at least 2, usually 3. Order in the text is the order of the answer.
+{"name":"parts","type":"list","instruction":"Each part that was replaced","mark":"part","items":"text"}
+
+4. Copied number.
+{"name":"rent","type":"number","instruction":"Printed room rent","mark":"rent","decimals":2}
+The inner may contain commas or a currency sign. The value itself must be a plain number.
+
+5. Sum. At least two marks with the parts name. Do NOT write the total anywhere, with or without commas.
+{"name":"ancillary","type":"number","instruction":"Those three charges added","compute":"sum","parts":"charge","decimals":2}
+
+6. Product. Do NOT write the product anywhere.
+{"name":"labour","type":"number","instruction":"Hours times the rate","compute":"product","left":"hours","right":"rate","decimals":2}
+
+7. Subtract. Do NOT write the difference anywhere.
+{"name":"balance","type":"number","instruction":"Gross minus the credit","compute":"subtract","left":"gross","right":"credit","decimals":2}
+
+8. Duration in days. Do NOT write the day count as its own number. If the gap is 15 days, the digits 15 must not stand alone anywhere in the text.
+{"name":"waited","type":"duration","instruction":"Days from the open date to the close date","unit":"days","compute":"days_between","start":"opened","end":"closed","dayfirst":true}
+
+9. Copied date, time, or datetime.
+{"name":"issued","type":"date","instruction":"Issue date","mark":"issued","dayfirst":true}
+{"name":"due_at","type":"time","instruction":"Closing time","mark":"due_at"}
+{"name":"admitted","type":"datetime","instruction":"Admission","mark":"admitted","dayfirst":true}
+Dates the program accepts: 2026-04-02, 2026/04/02, 2 April 2026, April 2, 2026, 02/04/2026 (day first).
+Times: 14:30 or 2:30 pm.
+Datetimes: 2026-04-02T14:30, or 2 April 2026 2:30 pm.
+Years must be from 2018 through 2033. Prefer 2026 or 2027.
+
+10. Date plus N days. Mark the start date and the integer day count. Do NOT write the resulting calendar day in any form, including ISO.
+{"name":"pay_by","type":"date","instruction":"Issue date plus the credit days","compute":"add_days","start":"issued","days":"credit","dayfirst":true}
+
+11. Estimate. Even count of comps, at least 4 (4, 6, or 8). Sort them. The gold is the average of the two middle values. That average must NOT appear anywhere in the text. It must sit strictly between min and max. Use integers so the average is an integer. decimals 0. Pick step so the average lands on a step (step 1, 5, 10, 25, or 50).
+{"name":"estimate","type":"estimate","instruction":"The rent sitting between the two central figures","mark":"comp","decimals":0,"min":1000,"max":9000,"step":10}
+
+12. Forecast. Put one observation per line, alone on that line:
+[[obs]]2026-03-10|40[[/]]
+Dates strictly increasing. More lines than the horizon. The LAST horizon lines are the hidden answer. Those hidden values must not appear anywhere else. The earlier lines stay in the student text.
+{"name":"next_counts","type":"forecast","instruction":"The next counts","horizon":2,"min":0,"max":100,"step":1,"decimals":0}
+horizon is 2 or 3.
+
+Every document also needs a decoy: a similar code, an old total, or a wrong quote that is NOT marked and is NOT equal to a calculated answer.
+
+Prose: a person actually wrote it. Different names, jobs, and cities from the list you were given. 350 to 900 characters. Messy is good: a line break inside a word, a stamp, a second language phrase, an OCR split. Do not copy the Hetal Shah, Meera Kulkarni, Nilantha Perera, or Kothrud examples.
+
+After writing the file, run this and repair until dropped is empty. Do not edit extractor/.
+
+python3 - << 'PY'
+from pathlib import Path
+from extractor.audit import audit_paths
+kept, dropped = audit_paths([Path("THE_FILE")])
+print("kept", len(kept))
+for item in dropped:
+    print(item)
+PY
+
+Do not run git. Do not checkout. Do not commit. Do not write any file except the one path you were given.

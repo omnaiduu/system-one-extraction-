@@ -1,0 +1,1349 @@
+{
+  "seed": 7,
+  "epochs_run": 80,
+  "learning_rate": 0.001,
+  "weight_decay": 0.01,
+  "selection": {
+    "epoch": 49,
+    "train_fields": 0.9638009049773756,
+    "threshold": 0.5,
+    "val_at_threshold": {
+      "fields": {
+        "correct": 4,
+        "total": 24,
+        "exact": 0.16666666666666666
+      },
+      "documents": {
+        "correct": 0,
+        "total": 4,
+        "exact": 0.0
+      }
+    }
+  },
+  "threshold_scores_on_val": {
+    "0.5": {
+      "fields": {
+        "correct": 4,
+        "total": 24,
+        "exact": 0.16666666666666666
+      },
+      "documents": {
+        "correct": 0,
+        "total": 4,
+        "exact": 0.0
+      }
+    },
+    "0.3": {
+      "fields": {
+        "correct": 4,
+        "total": 24,
+        "exact": 0.16666666666666666
+      },
+      "documents": {
+        "correct": 0,
+        "total": 4,
+        "exact": 0.0
+      }
+    },
+    "0.7": {
+      "fields": {
+        "correct": 4,
+        "total": 24,
+        "exact": 0.16666666666666666
+      },
+      "documents": {
+        "correct": 0,
+        "total": 4,
+        "exact": 0.0
+      }
+    }
+  },
+  "selection_rule": "earliest epoch with the highest training field exact-match. If that epoch is within the last 5 of the budget, extend by 20 up to 120. Then the missing threshold in {0.5, 0.3, 0.7} with the highest validation field exact-match, then document exact-match. Ties keep the earlier threshold in that order. Training loss is not used to pick the epoch, because the spread loss can fall without bound.",
+  "before": {
+    "generalization": {
+      "documents": {
+        "correct": 0,
+        "total": 24,
+        "exact": 0.0
+      },
+      "fields": {
+        "correct": 3,
+        "total": 112,
+        "exact": 0.026785714285714284
+      },
+      "questions": {
+        "correct": 12,
+        "total": 153,
+        "exact": 0.0784313725490196
+      },
+      "by_head": {
+        "point": {
+          "correct": 3,
+          "total": 59,
+          "exact": 0.05084745762711865
+        },
+        "number": {
+          "correct": 0,
+          "total": 19,
+          "exact": 0.0
+        },
+        "calendar": {
+          "correct": 0,
+          "total": 28,
+          "exact": 0.0
+        },
+        "spread": {
+          "correct": 0,
+          "total": 6,
+          "exact": 0.0
+        }
+      },
+      "by_kind": {
+        "date": {
+          "correct": 0,
+          "total": 26,
+          "exact": 0.0
+        },
+        "datetime": {
+          "correct": 0,
+          "total": 1,
+          "exact": 0.0
+        },
+        "duration": {
+          "correct": 0,
+          "total": 6,
+          "exact": 0.0
+        },
+        "estimate": {
+          "correct": 0,
+          "total": 3,
+          "exact": 0.0
+        },
+        "forecast": {
+          "correct": 0,
+          "total": 3,
+          "exact": 0.0
+        },
+        "list": {
+          "correct": 0,
+          "total": 13,
+          "exact": 0.0
+        },
+        "number": {
+          "correct": 0,
+          "total": 13,
+          "exact": 0.0
+        },
+        "text": {
+          "correct": 3,
+          "total": 46,
+          "exact": 0.06521739130434782
+        },
+        "time": {
+          "correct": 0,
+          "total": 1,
+          "exact": 0.0
+        }
+      },
+      "point_token_exact": {
+        "correct": 0,
+        "total": 69,
+        "exact": 0.0
+      },
+      "point_char_exact": {
+        "correct": 0,
+        "total": 69,
+        "exact": 0.0
+      },
+      "point_text_exact": {
+        "correct": 0,
+        "total": 69,
+        "exact": 0.0
+      },
+      "spread_in_band": {
+        "correct": 11,
+        "total": 11,
+        "exact": 1.0
+      }
+    },
+    "test": {
+      "documents": {
+        "correct": 0,
+        "total": 4,
+        "exact": 0.0
+      },
+      "fields": {
+        "correct": 0,
+        "total": 24,
+        "exact": 0.0
+      },
+      "questions": {
+        "correct": 0,
+        "total": 32,
+        "exact": 0.0
+      },
+      "by_head": {
+        "point": {
+          "correct": 0,
+          "total": 12,
+          "exact": 0.0
+        },
+        "number": {
+          "correct": 0,
+          "total": 6,
+          "exact": 0.0
+        },
+        "calendar": {
+          "correct": 0,
+          "total": 5,
+          "exact": 0.0
+        },
+        "spread": {
+          "correct": 0,
+          "total": 1,
+          "exact": 0.0
+        }
+      },
+      "by_kind": {
+        "date": {
+          "correct": 0,
+          "total": 5,
+          "exact": 0.0
+        },
+        "duration": {
+          "correct": 0,
+          "total": 1,
+          "exact": 0.0
+        },
+        "estimate": {
+          "correct": 0,
+          "total": 1,
+          "exact": 0.0
+        },
+        "list": {
+          "correct": 0,
+          "total": 3,
+          "exact": 0.0
+        },
+        "number": {
+          "correct": 0,
+          "total": 5,
+          "exact": 0.0
+        },
+        "text": {
+          "correct": 0,
+          "total": 9,
+          "exact": 0.0
+        }
+      },
+      "point_token_exact": {
+        "correct": 0,
+        "total": 14,
+        "exact": 0.0
+      },
+      "point_char_exact": {
+        "correct": 0,
+        "total": 14,
+        "exact": 0.0
+      },
+      "point_text_exact": {
+        "correct": 0,
+        "total": 14,
+        "exact": 0.0
+      },
+      "spread_in_band": {
+        "correct": 1,
+        "total": 1,
+        "exact": 1.0
+      }
+    },
+    "train": {
+      "documents": {
+        "correct": 0,
+        "total": 40,
+        "exact": 0.0
+      },
+      "fields": {
+        "correct": 6,
+        "total": 221,
+        "exact": 0.027149321266968326
+      },
+      "questions": {
+        "correct": 20,
+        "total": 310,
+        "exact": 0.06451612903225806
+      },
+      "by_head": {
+        "point": {
+          "correct": 5,
+          "total": 106,
+          "exact": 0.04716981132075472
+        },
+        "number": {
+          "correct": 0,
+          "total": 62,
+          "exact": 0.0
+        },
+        "calendar": {
+          "correct": 0,
+          "total": 43,
+          "exact": 0.0
+        },
+        "spread": {
+          "correct": 1,
+          "total": 10,
+          "exact": 0.1
+        }
+      },
+      "by_kind": {
+        "date": {
+          "correct": 0,
+          "total": 35,
+          "exact": 0.0
+        },
+        "datetime": {
+          "correct": 0,
+          "total": 4,
+          "exact": 0.0
+        },
+        "duration": {
+          "correct": 0,
+          "total": 18,
+          "exact": 0.0
+        },
+        "estimate": {
+          "correct": 1,
+          "total": 4,
+          "exact": 0.25
+        },
+        "forecast": {
+          "correct": 0,
+          "total": 6,
+          "exact": 0.0
+        },
+        "list": {
+          "correct": 0,
+          "total": 28,
+          "exact": 0.0
+        },
+        "number": {
+          "correct": 0,
+          "total": 44,
+          "exact": 0.0
+        },
+        "text": {
+          "correct": 5,
+          "total": 78,
+          "exact": 0.0641025641025641
+        },
+        "time": {
+          "correct": 0,
+          "total": 4,
+          "exact": 0.0
+        }
+      },
+      "point_token_exact": {
+        "correct": 0,
+        "total": 132,
+        "exact": 0.0
+      },
+      "point_char_exact": {
+        "correct": 0,
+        "total": 132,
+        "exact": 0.0
+      },
+      "point_text_exact": {
+        "correct": 0,
+        "total": 132,
+        "exact": 0.0
+      },
+      "spread_in_band": {
+        "correct": 19,
+        "total": 19,
+        "exact": 1.0
+      }
+    },
+    "val": {
+      "documents": {
+        "correct": 0,
+        "total": 4,
+        "exact": 0.0
+      },
+      "fields": {
+        "correct": 0,
+        "total": 24,
+        "exact": 0.0
+      },
+      "questions": {
+        "correct": 0,
+        "total": 31,
+        "exact": 0.0
+      },
+      "by_head": {
+        "point": {
+          "correct": 0,
+          "total": 12,
+          "exact": 0.0
+        },
+        "number": {
+          "correct": 0,
+          "total": 6,
+          "exact": 0.0
+        },
+        "calendar": {
+          "correct": 0,
+          "total": 5,
+          "exact": 0.0
+        },
+        "spread": {
+          "correct": 0,
+          "total": 1,
+          "exact": 0.0
+        }
+      },
+      "by_kind": {
+        "date": {
+          "correct": 0,
+          "total": 4,
+          "exact": 0.0
+        },
+        "datetime": {
+          "correct": 0,
+          "total": 1,
+          "exact": 0.0
+        },
+        "duration": {
+          "correct": 0,
+          "total": 2,
+          "exact": 0.0
+        },
+        "estimate": {
+          "correct": 0,
+          "total": 1,
+          "exact": 0.0
+        },
+        "list": {
+          "correct": 0,
+          "total": 3,
+          "exact": 0.0
+        },
+        "number": {
+          "correct": 0,
+          "total": 4,
+          "exact": 0.0
+        },
+        "text": {
+          "correct": 0,
+          "total": 9,
+          "exact": 0.0
+        }
+      },
+      "point_token_exact": {
+        "correct": 0,
+        "total": 14,
+        "exact": 0.0
+      },
+      "point_char_exact": {
+        "correct": 0,
+        "total": 14,
+        "exact": 0.0
+      },
+      "point_text_exact": {
+        "correct": 0,
+        "total": 14,
+        "exact": 0.0
+      },
+      "spread_in_band": {
+        "correct": 1,
+        "total": 1,
+        "exact": 1.0
+      }
+    }
+  },
+  "after": {
+    "generalization": {
+      "documents": {
+        "correct": 0,
+        "total": 24,
+        "exact": 0.0
+      },
+      "fields": {
+        "correct": 29,
+        "total": 112,
+        "exact": 0.25892857142857145
+      },
+      "questions": {
+        "correct": 43,
+        "total": 153,
+        "exact": 0.28104575163398693
+      },
+      "by_head": {
+        "point": {
+          "correct": 17,
+          "total": 59,
+          "exact": 0.288135593220339
+        },
+        "number": {
+          "correct": 2,
+          "total": 19,
+          "exact": 0.10526315789473684
+        },
+        "calendar": {
+          "correct": 10,
+          "total": 28,
+          "exact": 0.35714285714285715
+        },
+        "spread": {
+          "correct": 0,
+          "total": 6,
+          "exact": 0.0
+        }
+      },
+      "by_kind": {
+        "date": {
+          "correct": 8,
+          "total": 26,
+          "exact": 0.3076923076923077
+        },
+        "datetime": {
+          "correct": 1,
+          "total": 1,
+          "exact": 1.0
+        },
+        "duration": {
+          "correct": 2,
+          "total": 6,
+          "exact": 0.3333333333333333
+        },
+        "estimate": {
+          "correct": 0,
+          "total": 3,
+          "exact": 0.0
+        },
+        "forecast": {
+          "correct": 0,
+          "total": 3,
+          "exact": 0.0
+        },
+        "list": {
+          "correct": 0,
+          "total": 13,
+          "exact": 0.0
+        },
+        "number": {
+          "correct": 0,
+          "total": 13,
+          "exact": 0.0
+        },
+        "text": {
+          "correct": 17,
+          "total": 46,
+          "exact": 0.3695652173913043
+        },
+        "time": {
+          "correct": 1,
+          "total": 1,
+          "exact": 1.0
+        }
+      },
+      "point_token_exact": {
+        "correct": 7,
+        "total": 69,
+        "exact": 0.10144927536231885
+      },
+      "point_char_exact": {
+        "correct": 3,
+        "total": 69,
+        "exact": 0.043478260869565216
+      },
+      "point_text_exact": {
+        "correct": 7,
+        "total": 69,
+        "exact": 0.10144927536231885
+      },
+      "spread_in_band": {
+        "correct": 2,
+        "total": 11,
+        "exact": 0.18181818181818182
+      }
+    },
+    "test": {
+      "documents": {
+        "correct": 0,
+        "total": 4,
+        "exact": 0.0
+      },
+      "fields": {
+        "correct": 3,
+        "total": 24,
+        "exact": 0.125
+      },
+      "questions": {
+        "correct": 5,
+        "total": 32,
+        "exact": 0.15625
+      },
+      "by_head": {
+        "point": {
+          "correct": 2,
+          "total": 12,
+          "exact": 0.16666666666666666
+        },
+        "number": {
+          "correct": 0,
+          "total": 6,
+          "exact": 0.0
+        },
+        "calendar": {
+          "correct": 1,
+          "total": 5,
+          "exact": 0.2
+        },
+        "spread": {
+          "correct": 0,
+          "total": 1,
+          "exact": 0.0
+        }
+      },
+      "by_kind": {
+        "date": {
+          "correct": 1,
+          "total": 5,
+          "exact": 0.2
+        },
+        "duration": {
+          "correct": 0,
+          "total": 1,
+          "exact": 0.0
+        },
+        "estimate": {
+          "correct": 0,
+          "total": 1,
+          "exact": 0.0
+        },
+        "list": {
+          "correct": 0,
+          "total": 3,
+          "exact": 0.0
+        },
+        "number": {
+          "correct": 0,
+          "total": 5,
+          "exact": 0.0
+        },
+        "text": {
+          "correct": 2,
+          "total": 9,
+          "exact": 0.2222222222222222
+        }
+      },
+      "point_token_exact": {
+        "correct": 0,
+        "total": 14,
+        "exact": 0.0
+      },
+      "point_char_exact": {
+        "correct": 0,
+        "total": 14,
+        "exact": 0.0
+      },
+      "point_text_exact": {
+        "correct": 0,
+        "total": 14,
+        "exact": 0.0
+      },
+      "spread_in_band": {
+        "correct": 0,
+        "total": 1,
+        "exact": 0.0
+      }
+    },
+    "train": {
+      "documents": {
+        "correct": 32,
+        "total": 40,
+        "exact": 0.8
+      },
+      "fields": {
+        "correct": 213,
+        "total": 221,
+        "exact": 0.9638009049773756
+      },
+      "questions": {
+        "correct": 296,
+        "total": 310,
+        "exact": 0.9548387096774194
+      },
+      "by_head": {
+        "point": {
+          "correct": 106,
+          "total": 106,
+          "exact": 1.0
+        },
+        "number": {
+          "correct": 62,
+          "total": 62,
+          "exact": 1.0
+        },
+        "calendar": {
+          "correct": 43,
+          "total": 43,
+          "exact": 1.0
+        },
+        "spread": {
+          "correct": 2,
+          "total": 10,
+          "exact": 0.2
+        }
+      },
+      "by_kind": {
+        "date": {
+          "correct": 35,
+          "total": 35,
+          "exact": 1.0
+        },
+        "datetime": {
+          "correct": 4,
+          "total": 4,
+          "exact": 1.0
+        },
+        "duration": {
+          "correct": 18,
+          "total": 18,
+          "exact": 1.0
+        },
+        "estimate": {
+          "correct": 1,
+          "total": 4,
+          "exact": 0.25
+        },
+        "forecast": {
+          "correct": 1,
+          "total": 6,
+          "exact": 0.16666666666666666
+        },
+        "list": {
+          "correct": 28,
+          "total": 28,
+          "exact": 1.0
+        },
+        "number": {
+          "correct": 44,
+          "total": 44,
+          "exact": 1.0
+        },
+        "text": {
+          "correct": 78,
+          "total": 78,
+          "exact": 1.0
+        },
+        "time": {
+          "correct": 4,
+          "total": 4,
+          "exact": 1.0
+        }
+      },
+      "point_token_exact": {
+        "correct": 132,
+        "total": 132,
+        "exact": 1.0
+      },
+      "point_char_exact": {
+        "correct": 19,
+        "total": 132,
+        "exact": 0.14393939393939395
+      },
+      "point_text_exact": {
+        "correct": 132,
+        "total": 132,
+        "exact": 1.0
+      },
+      "spread_in_band": {
+        "correct": 15,
+        "total": 19,
+        "exact": 0.7894736842105263
+      }
+    },
+    "val": {
+      "documents": {
+        "correct": 0,
+        "total": 4,
+        "exact": 0.0
+      },
+      "fields": {
+        "correct": 4,
+        "total": 24,
+        "exact": 0.16666666666666666
+      },
+      "questions": {
+        "correct": 6,
+        "total": 31,
+        "exact": 0.1935483870967742
+      },
+      "by_head": {
+        "point": {
+          "correct": 2,
+          "total": 12,
+          "exact": 0.16666666666666666
+        },
+        "number": {
+          "correct": 0,
+          "total": 6,
+          "exact": 0.0
+        },
+        "calendar": {
+          "correct": 2,
+          "total": 5,
+          "exact": 0.4
+        },
+        "spread": {
+          "correct": 0,
+          "total": 1,
+          "exact": 0.0
+        }
+      },
+      "by_kind": {
+        "date": {
+          "correct": 1,
+          "total": 4,
+          "exact": 0.25
+        },
+        "datetime": {
+          "correct": 1,
+          "total": 1,
+          "exact": 1.0
+        },
+        "duration": {
+          "correct": 0,
+          "total": 2,
+          "exact": 0.0
+        },
+        "estimate": {
+          "correct": 0,
+          "total": 1,
+          "exact": 0.0
+        },
+        "list": {
+          "correct": 0,
+          "total": 3,
+          "exact": 0.0
+        },
+        "number": {
+          "correct": 0,
+          "total": 4,
+          "exact": 0.0
+        },
+        "text": {
+          "correct": 2,
+          "total": 9,
+          "exact": 0.2222222222222222
+        }
+      },
+      "point_token_exact": {
+        "correct": 1,
+        "total": 14,
+        "exact": 0.07142857142857142
+      },
+      "point_char_exact": {
+        "correct": 0,
+        "total": 14,
+        "exact": 0.0
+      },
+      "point_text_exact": {
+        "correct": 1,
+        "total": 14,
+        "exact": 0.07142857142857142
+      },
+      "spread_in_band": {
+        "correct": 0,
+        "total": 1,
+        "exact": 0.0
+      }
+    }
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 35.203590466658916,
+      "train_fields": 0.3393665158371041,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 2,
+      "train_loss": 7.8997898032903935,
+      "train_fields": 0.4253393665158371,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 3,
+      "train_loss": 4.944827400026682,
+      "train_fields": 0.5520361990950227,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 4,
+      "train_loss": 1.566289632411809,
+      "train_fields": 0.7194570135746606,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 5,
+      "train_loss": 1.1037692138041617,
+      "train_fields": 0.7918552036199095,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 6,
+      "train_loss": 1.261330742217446,
+      "train_fields": 0.8687782805429864,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.509926799512314,
+      "train_fields": 0.8778280542986425,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.3847971798273644,
+      "train_fields": 0.9230769230769231,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.24672975882416723,
+      "train_fields": 0.9230769230769231,
+      "val_fields_at_0.5": 0.25
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.5388043967283807,
+      "train_fields": 0.9321266968325792,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.15492508023682577,
+      "train_fields": 0.9276018099547512,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.2568109878998798,
+      "train_fields": 0.918552036199095,
+      "val_fields_at_0.5": 0.25
+    },
+    {
+      "epoch": 13,
+      "train_loss": 0.3199551766716619,
+      "train_fields": 0.9230769230769231,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 14,
+      "train_loss": 0.55718814683681,
+      "train_fields": 0.9140271493212669,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 15,
+      "train_loss": 0.3324751679813938,
+      "train_fields": 0.9366515837104072,
+      "val_fields_at_0.5": 0.25
+    },
+    {
+      "epoch": 16,
+      "train_loss": 0.11708438690100255,
+      "train_fields": 0.9230769230769231,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 17,
+      "train_loss": 0.01296679907957452,
+      "train_fields": 0.9276018099547512,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 18,
+      "train_loss": 0.04402535363262092,
+      "train_fields": 0.9321266968325792,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 19,
+      "train_loss": 0.6414500285319649,
+      "train_fields": 0.9140271493212669,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 20,
+      "train_loss": 0.6245848018077212,
+      "train_fields": 0.9276018099547512,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 21,
+      "train_loss": 0.0333383075592148,
+      "train_fields": 0.918552036199095,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 22,
+      "train_loss": 0.3054039471703561,
+      "train_fields": 0.9321266968325792,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 23,
+      "train_loss": 0.17422379102827446,
+      "train_fields": 0.9276018099547512,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 24,
+      "train_loss": 0.41755566255702764,
+      "train_fields": 0.9502262443438914,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 25,
+      "train_loss": 0.2618092989856934,
+      "train_fields": 0.9411764705882353,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 26,
+      "train_loss": 0.19847186591832963,
+      "train_fields": 0.9411764705882353,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 27,
+      "train_loss": 0.007688295191452618,
+      "train_fields": 0.9095022624434389,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 28,
+      "train_loss": 0.49958293567912737,
+      "train_fields": 0.9457013574660633,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 29,
+      "train_loss": 0.35087254806789014,
+      "train_fields": 0.9502262443438914,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 30,
+      "train_loss": 0.15794357473853865,
+      "train_fields": 0.9411764705882353,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 31,
+      "train_loss": 0.13706293859075802,
+      "train_fields": 0.9457013574660633,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 32,
+      "train_loss": -0.0350169617348898,
+      "train_fields": 0.9502262443438914,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 33,
+      "train_loss": 0.21738691766959248,
+      "train_fields": 0.9411764705882353,
+      "val_fields_at_0.5": 0.20833333333333334
+    },
+    {
+      "epoch": 34,
+      "train_loss": 0.3068588566035897,
+      "train_fields": 0.9411764705882353,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 35,
+      "train_loss": -0.002800037648495528,
+      "train_fields": 0.9366515837104072,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 36,
+      "train_loss": 0.08048300354788225,
+      "train_fields": 0.9502262443438914,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 37,
+      "train_loss": 0.10171988206948146,
+      "train_fields": 0.9457013574660633,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 38,
+      "train_loss": -0.10456359832222645,
+      "train_fields": 0.9502262443438914,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 39,
+      "train_loss": 0.18590705856180326,
+      "train_fields": 0.9502262443438914,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 40,
+      "train_loss": 0.677615190037197,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 41,
+      "train_loss": 0.1378534332611755,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 42,
+      "train_loss": 0.013268930828226713,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 43,
+      "train_loss": -0.10700134763475329,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 44,
+      "train_loss": 0.22734710143304632,
+      "train_fields": 0.9592760180995475,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 45,
+      "train_loss": 0.036276962875873044,
+      "train_fields": 0.9592760180995475,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 46,
+      "train_loss": 0.08294015844016217,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 47,
+      "train_loss": -0.06623684884475081,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 48,
+      "train_loss": -0.16651617631701504,
+      "train_fields": 0.9592760180995475,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 49,
+      "train_loss": -0.014328545855925374,
+      "train_fields": 0.9638009049773756,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 50,
+      "train_loss": -0.16588204147002722,
+      "train_fields": 0.9592760180995475,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 51,
+      "train_loss": 0.5610893991131242,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 52,
+      "train_loss": -0.03457851895541395,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 53,
+      "train_loss": -0.17341610728813706,
+      "train_fields": 0.9592760180995475,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 54,
+      "train_loss": -0.026750362627349224,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 55,
+      "train_loss": -0.19832034013813532,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 56,
+      "train_loss": 0.1582378675110257,
+      "train_fields": 0.9592760180995475,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 57,
+      "train_loss": -0.13062985241048258,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 58,
+      "train_loss": -0.15978270032917827,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 59,
+      "train_loss": 0.2509009745661335,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 60,
+      "train_loss": -0.057792660268927994,
+      "train_fields": 0.9592760180995475,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 61,
+      "train_loss": -0.07924338194771288,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 62,
+      "train_loss": -0.14516371398569067,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 63,
+      "train_loss": 0.6185072969159536,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 64,
+      "train_loss": -0.17115298150075975,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 65,
+      "train_loss": -0.05513926565760471,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 66,
+      "train_loss": 0.05755216490554923,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 67,
+      "train_loss": -0.09773054569878915,
+      "train_fields": 0.9592760180995475,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 68,
+      "train_loss": -0.1879207145543114,
+      "train_fields": 0.9592760180995475,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 69,
+      "train_loss": -0.11521059831600995,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 70,
+      "train_loss": 0.05106401847280017,
+      "train_fields": 0.9592760180995475,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 71,
+      "train_loss": 0.19466755963804405,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 72,
+      "train_loss": 0.04527756110157847,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 73,
+      "train_loss": -0.08512940281493363,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 74,
+      "train_loss": -0.14421654189347585,
+      "train_fields": 0.9592760180995475,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 75,
+      "train_loss": -0.13525043509459056,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 76,
+      "train_loss": 0.2644384271632654,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 77,
+      "train_loss": -0.05097938751126452,
+      "train_fields": 0.9638009049773756,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 78,
+      "train_loss": 0.40297389692642244,
+      "train_fields": 0.9592760180995475,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 79,
+      "train_loss": -0.04246195235233378,
+      "train_fields": 0.9592760180995475,
+      "val_fields_at_0.5": 0.16666666666666666
+    },
+    {
+      "epoch": 80,
+      "train_loss": 0.26549919526373017,
+      "train_fields": 0.9547511312217195,
+      "val_fields_at_0.5": 0.16666666666666666
+    }
+  ],
+  "weights": "public Hugging Face google/gemma-4-E2B-it; no Kaggle token was on this machine",
+  "readout": "last question token, because the document is a causal prefix",
+  "point_rule": "token span exact; character offsets are also recorded and are often one space wider"
+}
