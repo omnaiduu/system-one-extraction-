@@ -329,6 +329,28 @@ Round 4 on this same exam wrote amounts 0/12 and dates 1/20. The date move is th
 
 A wrong mark does not come back as a different money figure. On `e4-bills-01` the fee span was empty, so the program returned nothing. Round 4's number head had written 2186.75 for a fee of 1486.75. Lists still grab a long stretch of the note instead of one item. `e4-bills-02` marks most of the bill as the second charge name. Estimates are 0/3 here and 21/21 on the training notes. The highlighter fit the 200 texts. It did not learn to mark a new note.
 
+## Question block
+
+The next run keeps that same highlighter and the same program. Two things change. In the one forward, a question token cannot attend to the text. It can attend to itself and to earlier question tokens. The text tokens stay on the ordinary causal read: positions are unchanged, and on the first note the largest absolute gap between the blocked text states and an open read was 0. The question states did move. The largest absolute gap there was 69.5. Several CPU threads make this bf16 forward disagree with itself, so the blocked cache was written on one thread. The missing score also reads the best start match and the best end match, along with the question vector.
+
+No new documents were written. Training is the same 200 texts. The four exams already on disk were scored after the epoch was frozen. Epoch 80 was still inside the rising window, so the run extended to 100. Epoch 85 had the highest training field span exact-match, 962/970. The threshold stayed 0.5. All three thresholds, 0.5, 0.3, and 0.7, scored 2/24 on the four validation notes, so the earlier one stayed. Training value is 963/970, and 186/200 training documents are fully right. The one field whose span is wrong and whose value is still right is `r3-bills-14` balance: the marked tokens are off, and the characters still subtract to 1259.50.
+
+| Split | Fields | Question can see the text | Question blocked | Documents, blocked |
+| --- | --- | --- | --- | --- |
+| Train, 200 docs | 970 | 959/970 | 962/970 | 186/200 |
+| Val, the original 4 | 24 | 4/24 | 2/24 | 0/4 |
+| Test, the original 4 | 24 | 5/24 | 5/24 | 0/4 |
+| First exam, scored again | 109 | 36/109 | 39/109 | 0/24 |
+| Second exam, scored again | 92 | 26/92 | 32/92 | 1/24 |
+| Third exam, scored again | 92 | 24/92 | 38/92 | 1/24 |
+| Fourth exam, scored again | 74 | 28/74 | 29/74 | 0/24 |
+
+On the fourth exam, by kind: dates 12/20, the one datetime 1/1, durations 1/4, estimates 0/3, lists 0/12, amounts 2/12, text 13/21, the one time 0/1. By rule: a printed date 12/18, a due date 0/2, a day count 1/4, a copied string 5/13, a list 0/12, a median 0/3, a missing field 8/8, a product 2/4, a printed number 0/3, a subtraction 0/2, a sum 0/3.
+
+The check for this run was the lists and the sums. Both stayed at zero. Lists still run past the item. On `e4-bills-02` the third charge name is the right span and the extra item is correctly missing, and the first two names continue through the rest of the bill. Sums are 0/3. Training did stay high, 962/970 against 959/970 when the question could see the text, so the question state can be trained without having already read the answer in that same vector.
+
+What moved on the fourth exam is the missing call and a few copied strings. Missing fields are 8/8, up from 5/8. Copied strings are 5/13, up from 3/13. `e4-series-03` now marks `Saint-Laurent-du-Maroni` and leaves the rest of the note. Dates are 12/20, down from 14/20. Amounts are 2/12, down from 4/12. `e4-bills-05` had been the one fully right document. Its balance span is empty now, so 2825.50 is gone, and no fourth-exam document is fully right. The third exam moved more, 24/92 to 38/92, with `e3-ops-05` fully right.
+
 ## What the blog must not say
 
 - That Cloudflare published Clairic's head code. They published the output types. The four heads are our reading of those types.
@@ -336,7 +358,7 @@ A wrong mark does not come back as a different money figure. On `e4-bills-01` th
 - That the writer "just knows the character offsets." It knows the words. The program counts.
 - That 48 audited rows, or a future 30,000 cloned rows, are enough.
 - That estimate and forecast labels are real-world truth. They are rules applied to numbers the writer placed in the document.
-- That any training round is a production accuracy. Round 1 fit 213 of 221 training fields and 29 of 112 exam fields. Round 2 fit 744 of 769 training fields and 14 of 95 fields on a fresh exam. Round 3 fit 720 of 769 training fields and 15 of 95 fields on a third exam. Round 4 fit 948 of 991 training fields and 9 of 77 fields on a fourth exam. Amounts on that fourth exam were 0/12. Dates were 1/20. The highlighter re-check of that same fourth exam fit 959 of 970 training fields and 28 of 74 exam fields. Dates were 14/20. Amounts were 4/12. Sums were 0/3.
+- That any training round is a production accuracy. Round 1 fit 213 of 221 training fields and 29 of 112 exam fields. Round 2 fit 744 of 769 training fields and 14 of 95 fields on a fresh exam. Round 3 fit 720 of 769 training fields and 15 of 95 fields on a third exam. Round 4 fit 948 of 991 training fields and 9 of 77 fields on a fourth exam. Amounts on that fourth exam were 0/12. Dates were 1/20. The highlighter re-check of that same fourth exam fit 959 of 970 training fields and 28 of 74 exam fields. Dates were 14/20. Amounts were 4/12. Sums were 0/3. Blocking the question from the text, on the same documents, fit 962 of 970 training fields and 29 of 74 fourth-exam fields. Lists stayed 0/12. Sums stayed 0/3. Missing fields were 8/8. Dates were 12/20. Amounts were 2/12.
 - That a passed auditor means the English is diverse. The auditor has no opinion about style. The repeated field shape is a quality bug it cannot see.
 
 ## File map
@@ -354,7 +376,7 @@ A wrong mark does not come back as a different money figure. On `e4-bills-01` th
 - `data/exam3/raw/` and `data/exam3/locked.jsonl` — the third 24-document exam. This is the round 3 claim. The first two exams were not scored again.
 - `data/round3/raw/` — 62 added training documents, brackets still present. `data/round3/audited.jsonl` is the measured form. All of it is train. None of it was put into val or test.
 - `data/exam4/raw/` and `data/exam4/locked.jsonl` — the fourth 24-document exam. This is the round 4 claim. The first three exams were not scored again.
-- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/heads_round2.pt` and `outputs/scores_round2.json` are the second run. `outputs/heads_round3.pt` and `outputs/scores_round3.json` are the document-reader run, scored once on exam 3. `outputs/heads_round4.pt` and `outputs/scores_round4.json` are the 200-document run, scored once on exam 4. `outputs/heads_highlighter.pt`, `outputs/scores_highlighter.json`, and `outputs/predictions_highlighter.json` are the single-highlighter re-check. `outputs/cache/` is the hidden-state cache on disk and is gitignored.
+- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/heads_round2.pt` and `outputs/scores_round2.json` are the second run. `outputs/heads_round3.pt` and `outputs/scores_round3.json` are the document-reader run, scored once on exam 3. `outputs/heads_round4.pt` and `outputs/scores_round4.json` are the 200-document run, scored once on exam 4. `outputs/heads_highlighter.pt`, `outputs/scores_highlighter.json`, and `outputs/predictions_highlighter.json` are the single-highlighter re-check. `outputs/heads_highlighter_blocked.pt`, `outputs/scores_highlighter_blocked.json`, and `outputs/predictions_highlighter_blocked.json` are the same head after the question was blocked from the text. `outputs/cache/` is the hidden-state cache on disk and is gitignored.
 - `blogs/mark-and-measure.md` — this note.
 
 ## Open threads for the essay

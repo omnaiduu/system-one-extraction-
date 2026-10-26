@@ -42,8 +42,10 @@ def test_a_list_field_needs_every_item_and_the_stop():
         "calendar": CalendarHead(width),
         "spread": SpreadHead(width),
     }
-    heads["point"].missing.weight.data.zero_()
-    heads["point"].missing.bias.data.fill_(-20)
+    heads["point"].missing_question.weight.data.zero_()
+    heads["point"].missing_question.bias.data.fill_(-20)
+    heads["point"].missing_match.weight.data.zero_()
+    heads["point"].missing_match.bias.data.zero_()
     record = {
         "id": "demo",
         "split": "val",

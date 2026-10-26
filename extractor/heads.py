@@ -22,7 +22,8 @@ class PointHead(nn.Module):
         self.query = nn.Linear(width, inner)
         self.start_key = nn.Linear(width, inner)
         self.end_key = nn.Linear(width, inner)
-        self.missing = nn.Linear(width, 1)
+        self.missing_question = nn.Linear(width, 1)
+        self.missing_match = nn.Linear(2, 1)
         self.score_scale = inner ** -0.5
 
     def forward(self, document: torch.Tensor, question: torch.Tensor) -> dict[str, torch.Tensor]:
@@ -31,7 +32,9 @@ class PointHead(nn.Module):
         query = self.query(question)
         start = torch.einsum("bh,bth->bt", query, self.start_key(document)) * self.score_scale
         end = torch.einsum("bh,bth->bt", query, self.end_key(document)) * self.score_scale
-        return {"start": start, "end": end, "missing": self.missing(question).squeeze(-1)}
+        best = torch.stack([start.amax(dim=-1), end.amax(dim=-1)], dim=-1)
+        missing = self.missing_question(question) + self.missing_match(best)
+        return {"start": start, "end": end, "missing": missing.squeeze(-1)}
 
 
 class DocumentReader(nn.Module):

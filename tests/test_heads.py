@@ -3,6 +3,19 @@ import torch
 from extractor.heads import NumberHead, PointHead, number_loss, point_loss
 
 
+def test_missing_score_reads_the_best_match():
+    torch.manual_seed(0)
+    head = PointHead(8, inner=4)
+    head.missing_question.weight.data.zero_()
+    head.missing_question.bias.data.zero_()
+    head.missing_match.weight.data.copy_(torch.tensor([[1.0, 0.0]]))
+    head.missing_match.bias.data.zero_()
+    document = torch.randn(2, 5, 8)
+    question = torch.randn(2, 8)
+    output = head(document, question)
+    assert torch.allclose(output["missing"], output["start"].amax(dim=-1))
+
+
 def test_point_head_learns_a_fixed_span():
     torch.manual_seed(0)
     head = PointHead(8, inner=8)

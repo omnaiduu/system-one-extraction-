@@ -13,7 +13,7 @@ from pathlib import Path
 
 import torch
 
-from extractor.gemma_cache import HIGHLIGHT_CACHE
+from extractor.gemma_cache import HIGHLIGHT_BLOCKED, HIGHLIGHT_CACHE
 from extractor.heads import PointHead, point_loss
 from extractor.highlight import dumps_public, group_questions, judge_group, summarize_highlighter
 
@@ -27,11 +27,14 @@ WEIGHT_DECAY = 0.01
 SCORED_SPLITS = ("train", "val", "test", "generalization", "exam2", "exam3", "exam4")
 
 
-def load_records() -> list[dict]:
-    paths = sorted(HIGHLIGHT_CACHE.glob("*.pt"))
+def load_records(cache: Path, blocked: bool) -> list[dict]:
+    paths = sorted(cache.glob("*.pt"))
     if not paths:
-        raise RuntimeError(f"no highlighter states in {HIGHLIGHT_CACHE}")
-    return [torch.load(path, weights_only=False) for path in paths]
+        raise RuntimeError(f"no highlighter states in {cache}")
+    records = [torch.load(path, weights_only=False) for path in paths]
+    if blocked and not all(record.get("blocked") for record in records):
+        raise RuntimeError("blocked training needs question-blocked states")
+    return records
 
 
 def predict_span(head: PointHead, question: dict, doc_states: torch.Tensor, threshold: float) -> dict:
@@ -78,9 +81,15 @@ def loss_on(head: PointHead, record: dict, question: dict) -> torch.Tensor:
 
 
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--blocked", action="store_true", help="train on question states that cannot see the text")
+    args = parser.parse_args()
     random.seed(SEED)
     torch.manual_seed(SEED)
-    records = load_records()
+    cache = HIGHLIGHT_BLOCKED if args.blocked else HIGHLIGHT_CACHE
+    records = load_records(cache, args.blocked)
     splits: dict[str, list[dict]] = {}
     for record in records:
         splits.setdefault(record["split"], []).append(record)
@@ -195,6 +204,11 @@ def main() -> None:
         "history": history,
         "weights": "public Hugging Face google/gemma-4-E2B-it",
         "readout": (
+            "one point head. Question tokens cannot attend to the text. "
+            "The missing score reads the question state and the best start and end match. "
+            "The program reads the marked spans."
+            if args.blocked
+            else
             "one point head. The question-end state is the same causal state as before: "
             "it has seen the text and the question. The program reads the marked spans."
         ),
@@ -209,16 +223,18 @@ def main() -> None:
         ),
     }
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "scores_highlighter.json").write_text(dumps_public(payload))
-    (OUT / "predictions_highlighter.json").write_text(dumps_public(predictions))
+    suffix = "_blocked" if args.blocked else ""
+    (OUT / f"scores_highlighter{suffix}.json").write_text(dumps_public(payload))
+    (OUT / f"predictions_highlighter{suffix}.json").write_text(dumps_public(predictions))
     torch.save(
         {
             "point": best_state,
             "width": width,
             "selection": payload["selection"],
             "seed": SEED,
+            "blocked": args.blocked,
         },
-        OUT / "heads_highlighter.pt",
+        OUT / f"heads_highlighter{suffix}.pt",
     )
     exam = after["exam4"]
     print(
@@ -226,7 +242,7 @@ def main() -> None:
         f"value {exam['fields_value']['correct']}/{exam['fields_value']['total']}",
         flush=True,
     )
-    print("wrote outputs/scores_highlighter.json outputs/heads_highlighter.pt", flush=True)
+    print(f"wrote outputs/scores_highlighter{suffix}.json outputs/heads_highlighter{suffix}.pt", flush=True)
 
 
 if __name__ == "__main__":

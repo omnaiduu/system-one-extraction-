@@ -1,4 +1,7 @@
+import torch
+
 from extractor.audit import audit_document
+from extractor.gemma_cache import apply_question_block
 from extractor.highlight import apply_recipe, expand_highlighter, program_matches_field, verify_corpus
 
 
@@ -75,6 +78,15 @@ def test_due_date_uses_the_date_and_the_day_count():
     )
     assert [piece["text"] for piece in row["fields"]["due_on"]["evidence"]] == ["2 Sep 2026", "30"]
     assert program_matches_field(row["fields"]["due_on"], row["text"])
+
+
+def test_question_block_leaves_the_text_rows_and_closes_the_text_columns():
+    mask = torch.zeros(1, 1, 6, 6)
+    mask[:, :, :, 4:] = -1
+    blocked = apply_question_block(mask, doc_tokens=4)
+    assert torch.equal(blocked[:, :, :4, :], mask[:, :, :4, :])
+    assert torch.equal(blocked[:, :, 4:, 4:], mask[:, :, 4:, 4:])
+    assert torch.all(blocked[:, :, 4:, :4] == torch.finfo(mask.dtype).min)
 
 
 def test_every_saved_mark_reproduces_its_audited_value():
