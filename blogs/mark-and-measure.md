@@ -305,6 +305,30 @@ Point, number, and calendar are under half, and each has at least 8 fields on th
 
 200 synthetic training documents is the stop for this set. Another 60 notes of the same shape would teach the same skeleton. The miss is no longer "the head cannot see the document." The head sees the document, fits 214 of 216 training amounts, and writes the wrong amount on every new bill in this exam. Real customer mail is still not on disk.
 
+## Highlighter
+
+The number head and the calendar head were dropped for this run. One point head remains. It is the same head as before: the last token of the question has already seen the text, and the head marks a start token and an end token. No new documents were written. The training texts are the same 200. The four 24-document exams already on disk were scored after the epoch was frozen. They were not used to pick the epoch. They had already been read when this run was chosen, so this is a re-check, not a new exam.
+
+Each printed value, and each piece of a sum, product, subtraction, day count, due date, or median, is a span question. A list is still Item 1, Item 2, and one extra item whose answer is missing. A sum is Part 1, Part 2, and one extra part whose answer is missing. A day count is two named spans, the start date and the end date. The program reads the marked characters and applies the same rule the auditor used. A forecast is not in this score. Its answer was removed from the text, so there is no span to mark. Exam 4 has 3 of those, which is why this score has 74 fields and round 4 had 77.
+
+Epoch 70 of 80 had the highest training field span exact-match, 959/970. The run did not extend. The missing threshold stayed 0.5. On that checkpoint the program's value matches the span: 959/970 training fields, 183/200 training documents. Random initialization is the "before" column.
+
+| Split | Fields | Before | After | Documents after |
+| --- | --- | --- | --- | --- |
+| Train, 200 docs | 970 | 22/970 | 959/970 | 183/200 |
+| Val, the original 4 | 24 | 1/24 | 4/24 | 0/4 |
+| Test, the original 4 | 24 | 0/24 | 5/24 | 0/4 |
+| First exam, scored again | 109 | 4/109 | 36/109 | 0/24 |
+| Second exam, scored again | 92 | 4/92 | 26/92 | 1/24 |
+| Third exam, scored again | 92 | 2/92 | 24/92 | 0/24 |
+| Fourth exam, scored again | 74 | 5/74 | 28/74 | 1/24 |
+
+On the fourth exam, by kind: dates 14/20, the one datetime 1/1, durations 1/4, estimates 0/3, lists 0/12, amounts 4/12, text 8/21, the one time 0/1. By rule: a printed date 13/18, a due date 1/2, a day count 1/4, a copied string 3/13, a list 0/12, a median 0/3, a missing field 5/8, a product 2/4, a printed number 1/3, a subtraction 1/2, a sum 0/3. One document is right, `e4-bills-05`.
+
+Round 4 on this same exam wrote amounts 0/12 and dates 1/20. The date move is the copied span. A printed day was already the kind of thing the point head could mark. The calendar head had been inventing a day from the question vector. The amount move is smaller, 0/12 to 4/12, and the three sums on this exam are 0/3. The program is not what missed. The mark missed, and the program then had nothing it could add.
+
+A wrong mark does not come back as a different money figure. On `e4-bills-01` the fee span was empty, so the program returned nothing. Round 4's number head had written 2186.75 for a fee of 1486.75. Lists still grab a long stretch of the note instead of one item. `e4-bills-02` marks most of the bill as the second charge name. Estimates are 0/3 here and 21/21 on the training notes. The highlighter fit the 200 texts. It did not learn to mark a new note.
+
 ## What the blog must not say
 
 - That Cloudflare published Clairic's head code. They published the output types. The four heads are our reading of those types.
@@ -312,7 +336,7 @@ Point, number, and calendar are under half, and each has at least 8 fields on th
 - That the writer "just knows the character offsets." It knows the words. The program counts.
 - That 48 audited rows, or a future 30,000 cloned rows, are enough.
 - That estimate and forecast labels are real-world truth. They are rules applied to numbers the writer placed in the document.
-- That any training round is a production accuracy. Round 1 fit 213 of 221 training fields and 29 of 112 exam fields. Round 2 fit 744 of 769 training fields and 14 of 95 fields on a fresh exam. Round 3 fit 720 of 769 training fields and 15 of 95 fields on a third exam. Round 4 fit 948 of 991 training fields and 9 of 77 fields on a fourth exam. Amounts on that fourth exam were 0/12. Dates were 1/20.
+- That any training round is a production accuracy. Round 1 fit 213 of 221 training fields and 29 of 112 exam fields. Round 2 fit 744 of 769 training fields and 14 of 95 fields on a fresh exam. Round 3 fit 720 of 769 training fields and 15 of 95 fields on a third exam. Round 4 fit 948 of 991 training fields and 9 of 77 fields on a fourth exam. Amounts on that fourth exam were 0/12. Dates were 1/20. The highlighter re-check of that same fourth exam fit 959 of 970 training fields and 28 of 74 exam fields. Dates were 14/20. Amounts were 4/12. Sums were 0/3.
 - That a passed auditor means the English is diverse. The auditor has no opinion about style. The repeated field shape is a quality bug it cannot see.
 
 ## File map
@@ -324,12 +348,13 @@ Point, number, and calendar are under half, and each has at least 8 fields on th
 - `data/audited/report.json` — counts and drop reasons.
 - `data/generalization/raw/` — the locked 24-document exam, brackets still present. `locked.jsonl` is the audited form.
 - `extractor/labels.py`, `heads.py`, `gemma_cache.py`, `train_heads.py`, `score_heads.py` — question packing, the four heads, the tiny-vocabulary forward, training, and exact-match scoring.
+- `extractor/highlight.py`, `extractor/train_highlighter.py`, `tests/test_highlight.py` — one point head, the program that reads its marks, and the check that those marks reproduce every audited value.
 - `data/round2/raw/` — 98 added training documents, brackets still present. `data/round2/audited.jsonl` is the measured form. All of it is train. None of it was put into val or test.
 - `data/exam2/raw/` and `data/exam2/locked.jsonl` — the fresh 24-document exam. This is the round 2 claim. The first exam was not scored again.
 - `data/exam3/raw/` and `data/exam3/locked.jsonl` — the third 24-document exam. This is the round 3 claim. The first two exams were not scored again.
 - `data/round3/raw/` — 62 added training documents, brackets still present. `data/round3/audited.jsonl` is the measured form. All of it is train. None of it was put into val or test.
 - `data/exam4/raw/` and `data/exam4/locked.jsonl` — the fourth 24-document exam. This is the round 4 claim. The first three exams were not scored again.
-- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/heads_round2.pt` and `outputs/scores_round2.json` are the second run. `outputs/heads_round3.pt` and `outputs/scores_round3.json` are the document-reader run, scored once on exam 3. `outputs/heads_round4.pt` and `outputs/scores_round4.json` are the 200-document run, scored once on exam 4. `outputs/cache/docs/` is the hidden-state cache on disk and is gitignored.
+- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/heads_round2.pt` and `outputs/scores_round2.json` are the second run. `outputs/heads_round3.pt` and `outputs/scores_round3.json` are the document-reader run, scored once on exam 3. `outputs/heads_round4.pt` and `outputs/scores_round4.json` are the 200-document run, scored once on exam 4. `outputs/heads_highlighter.pt`, `outputs/scores_highlighter.json`, and `outputs/predictions_highlighter.json` are the single-highlighter re-check. `outputs/cache/` is the hidden-state cache on disk and is gitignored.
 - `blogs/mark-and-measure.md` — this note.
 
 ## Open threads for the essay

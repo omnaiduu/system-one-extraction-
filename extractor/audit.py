@@ -367,14 +367,24 @@ def _label_duration(text: str, grouped: dict[str, list[Mark]], spec: dict, base:
         raise Drop("only_days")
     if spec.get("compute") != "days_between":
         raise Drop("bad_compute:duration")
-    start = parse_date(_need_marks(grouped, spec["start"], exact=1)[0].inner, spec.get("dayfirst", True))
-    end = parse_date(_need_marks(grouped, spec["end"], exact=1)[0].inner, spec.get("dayfirst", True))
+    start_mark = _need_marks(grouped, spec["start"], exact=1)[0]
+    end_mark = _need_marks(grouped, spec["end"], exact=1)[0]
+    start = parse_date(start_mark.inner, spec.get("dayfirst", True))
+    end = parse_date(end_mark.inner, spec.get("dayfirst", True))
     days = (end - start).days
     if days < 0:
         raise Drop("negative_duration")
     if number_present(text, Decimal(days), 0):
         raise Drop(f"answer_leaked:{spec['name']}")
-    return {**base, "unit": "days", "missing": False, "value": days}
+    return {
+        **base,
+        "unit": "days",
+        "compute": "days_between",
+        "dayfirst": bool(spec.get("dayfirst", True)),
+        "missing": False,
+        "value": days,
+        "evidence": [_evidence(start_mark), _evidence(end_mark)],
+    }
 
 
 def _label_calendar(text: str, grouped: dict[str, list[Mark]], spec: dict, base: dict) -> dict:
@@ -383,15 +393,32 @@ def _label_calendar(text: str, grouped: dict[str, list[Mark]], spec: dict, base:
     if compute is None:
         mark = _need_marks(grouped, spec["mark"], exact=1)[0]
         value = _calendar_value(spec["type"], mark.inner, dayfirst)
-        return {**base, "missing": False, "value": value, "start": mark.start, "end": mark.end}
+        return {
+            **base,
+            "missing": False,
+            "value": value,
+            "start": mark.start,
+            "end": mark.end,
+            "evidence": mark.inner,
+            "dayfirst": dayfirst,
+        }
     if compute != "add_days":
         raise Drop(f"bad_compute:{compute}")
-    start = parse_date(_need_marks(grouped, spec["start"], exact=1)[0].inner, dayfirst)
-    days = int(parse_number(_need_marks(grouped, spec["days"], exact=1)[0].inner))
+    start_mark = _need_marks(grouped, spec["start"], exact=1)[0]
+    days_mark = _need_marks(grouped, spec["days"], exact=1)[0]
+    start = parse_date(start_mark.inner, dayfirst)
+    days = int(parse_number(days_mark.inner))
     value = (start + timedelta(days=days)).isoformat()
     if value in text:
         raise Drop(f"answer_leaked:{spec['name']}")
-    return {**base, "compute": "add_days", "missing": False, "value": value}
+    return {
+        **base,
+        "compute": "add_days",
+        "dayfirst": dayfirst,
+        "missing": False,
+        "value": value,
+        "evidence": [_evidence(start_mark), _evidence(days_mark)],
+    }
 
 
 def _calendar_value(kind: str, raw: str, dayfirst: bool) -> str:
@@ -423,6 +450,7 @@ def _label_estimate(text: str, grouped: dict[str, list[Mark]], spec: dict, base:
         **base,
         "missing": False,
         "value": float(median),
+        "decimals": int(spec.get("decimals", 0)),
         "min": float(lo),
         "max": float(hi),
         "step": float(step),

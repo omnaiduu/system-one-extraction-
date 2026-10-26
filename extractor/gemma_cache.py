@@ -21,6 +21,7 @@ import torch
 from safetensors import safe_open
 from transformers import AutoConfig, AutoTokenizer, Gemma4TextModel
 
+from extractor.highlight import align_row, expand_highlighter, raw_index
 from extractor.labels import (
     char_span_to_tokens,
     document_token_indexes,
@@ -33,9 +34,9 @@ SNAPSHOT = Path(
     "/home/ubuntu/.cache/huggingface/hub/models--google--gemma-4-E2B-it/"
     "snapshots/3e22461f65e89153144f8adb70e3b8c2cc9845a7"
 )
-WEIGHTS = SNAPSHOT / "model.safetensors"
 PREFIX = "model.language_model."
 CACHE = Path("outputs/cache/docs")
+HIGHLIGHT_CACHE = Path("outputs/cache/highlight")
 
 SOURCES = (
     ("train", Path("data/audited/train.jsonl")),
@@ -81,13 +82,17 @@ def load_rows() -> list[dict]:
     return rows
 
 
-def encode_rows(rows: list[dict]) -> tuple[list[dict], list[int]]:
+def encode_rows(rows: list[dict], expand_fn=expand_document, snapshot: Path = SNAPSHOT) -> tuple[list[dict], list[int]]:
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
-    tokenizer = AutoTokenizer.from_pretrained(SNAPSHOT)
+    tokenizer = AutoTokenizer.from_pretrained(snapshot)
     encoded = []
     used: set[int] = set()
     for row in rows:
-        questions = expand_document(row)
+        expanded = expand_fn(row)
+        if isinstance(expanded, tuple):
+            questions, skipped = expanded
+        else:
+            questions, skipped = expanded, []
         prompt, spans = pack_prompt(row["text"], questions)
         if not prompt.startswith(row["text"]):
             raise RuntimeError(f"{row['id']} document is not the prompt prefix")
@@ -139,6 +144,9 @@ def encode_rows(rows: list[dict]) -> tuple[list[dict], list[int]]:
                 item["step"] = question["step"]
             else:
                 raise RuntimeError(question["head"])
+            for key in ("recipe", "part", "role"):
+                if key in question:
+                    item[key] = question[key]
             packed.append(item)
         encoded.append(
             {
@@ -149,15 +157,16 @@ def encode_rows(rows: list[dict]) -> tuple[list[dict], list[int]]:
                 "doc_positions": allowed,
                 "doc_offsets": [offsets[index] for index in allowed],
                 "questions": packed,
+                "skipped": skipped,
             }
         )
         used.update(ids)
     return encoded, sorted(used)
 
 
-def build_model(vocab: int) -> Gemma4TextModel:
+def build_model(vocab: int, snapshot: Path = SNAPSHOT) -> Gemma4TextModel:
     torch.set_default_dtype(torch.bfloat16)
-    config = AutoConfig.from_pretrained(SNAPSHOT)
+    config = AutoConfig.from_pretrained(snapshot)
     text = config.text_config
     text.vocab_size = vocab
     text.vocab_size_per_layer_input = vocab
@@ -178,8 +187,8 @@ def _copy_tensor(destination, source) -> None:
     destination.copy_(source.to(dtype=destination.dtype))
 
 
-def load_weights(model: Gemma4TextModel, token_ids: list[int]) -> None:
-    with safe_open(WEIGHTS, framework="pt") as handle:
+def load_weights(model: Gemma4TextModel, token_ids: list[int], snapshot: Path = SNAPSHOT) -> None:
+    with safe_open(snapshot / "model.safetensors", framework="pt") as handle:
         keys = set(handle.keys())
         for name, param in model.named_parameters():
             if name in {"embed_tokens.weight", "embed_tokens_per_layer.weight"}:
@@ -215,23 +224,23 @@ def forward_document(model: Gemma4TextModel, table: torch.Tensor, token_ids: lis
     return hidden.to(dtype=torch.float16).cpu()
 
 
-def cache_path(split: str, doc_id: str) -> Path:
+def cache_path(split: str, doc_id: str, root: Path = CACHE) -> Path:
     safe = doc_id.replace("/", "_")
-    return CACHE / f"{split}__{safe}.pt"
+    return root / f"{split}__{safe}.pt"
 
 
-def write_cache(encoded: list[dict], limit: int) -> None:
+def write_cache(encoded: list[dict], limit: int, root: Path = CACHE, snapshot: Path = SNAPSHOT) -> None:
     chosen = encoded[:limit] if limit else encoded
-    pending = [item for item in chosen if not cache_path(item["split"], item["id"]).exists()]
+    pending = [item for item in chosen if not cache_path(item["split"], item["id"], root).exists()]
     if not pending:
         print(f"cache already has {len(chosen)} documents", flush=True)
         return
     token_ids = sorted({token for item in encoded for token in item["input_ids"]})
     print(f"building text tower for {len(token_ids)} tokens, {len(pending)} forwards left", flush=True)
-    model = build_model(len(token_ids))
-    load_weights(model, token_ids)
+    model = build_model(len(token_ids), snapshot)
+    load_weights(model, token_ids, snapshot)
     table = lookup_table(token_ids)
-    CACHE.mkdir(parents=True, exist_ok=True)
+    root.mkdir(parents=True, exist_ok=True)
     for item in pending:
         clock = time.perf_counter()
         hidden = forward_document(model, table, item["input_ids"])
@@ -249,22 +258,49 @@ def write_cache(encoded: list[dict], limit: int) -> None:
             "doc_states": doc_states,
             "doc_offsets": item["doc_offsets"],
             "questions": questions,
+            "skipped": item.get("skipped", []),
         }
-        destination = cache_path(item["split"], item["id"])
+        destination = cache_path(item["split"], item["id"], root)
         torch.save(record, destination)
         elapsed = time.perf_counter() - clock
         print(f"cached {item['split']} {item['id']} tokens={len(item['input_ids'])} seconds={elapsed:.1f}", flush=True)
 
 
+def load_highlighter_rows() -> list[dict]:
+    """Same documents and splits. Spans come from the original marks, re-checked against the audited values."""
+    raws = raw_index()
+    rows = []
+    seen = set()
+    for split, path in source_paths():
+        for line in path.read_text().splitlines():
+            if not line.strip():
+                continue
+            audited = json.loads(line)
+            if audited["id"] in seen:
+                raise RuntimeError(f"duplicate document id {audited['id']}")
+            seen.add(audited["id"])
+            if audited["id"] not in raws:
+                raise RuntimeError(f"no marked source for {audited['id']}")
+            fresh = align_row(audited, raws[audited["id"]])
+            fresh["_split"] = split
+            rows.append(fresh)
+    return rows
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=0, help="cache only the first N documents; 0 means all")
+    parser.add_argument("--highlighter", action="store_true", help="cache span questions for the single highlighter")
+    parser.add_argument("--snapshot", type=Path, default=None, help="local Gemma snapshot directory")
     args = parser.parse_args()
+    snapshot = args.snapshot or Path(os.environ.get("GEMMA_SNAPSHOT", SNAPSHOT))
     torch.set_num_threads(os.cpu_count() or 4)
-    rows = load_rows()
-    encoded, token_ids = encode_rows(rows)
+    rows = load_highlighter_rows() if args.highlighter else load_rows()
+    expand_fn = expand_highlighter if args.highlighter else expand_document
+    encoded, token_ids = encode_rows(rows, expand_fn, snapshot)
     print(f"documents={len(encoded)} unique_tokens={len(token_ids)}", flush=True)
-    write_cache(encoded, args.limit)
+    root = HIGHLIGHT_CACHE if args.highlighter else CACHE
+    write_cache(encoded, args.limit, root, snapshot)
 
 
 if __name__ == "__main__":
