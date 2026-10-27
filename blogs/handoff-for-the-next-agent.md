@@ -4,6 +4,8 @@ This is the operational note. `blogs/mark-and-measure.md` is the essay log of th
 
 The current student is a frozen Gemma 4 E2B, one forward, one point head, and a program that reads the marked characters. On the latest 24-document exam the program's value is **42 of 74** fields, **4 of 24** documents. The same head is right on **968 of 970** training fields. The last change that retrained anything moved that exam by one field. The two changes after it were rules on scores that were already trained, and they are used up.
 
+Do not move dates and amounts back onto the old number head and calendar head. On this exam those heads scored 0/12 amounts and 1/20 dates. The span method's gain is printed dates, not text. Computed values stay with the program, and the network's job is to mark the inputs. The full comparison is in "Computed fields, and whether to go back to the four heads."
+
 ## What was fixed before any of this code
 
 The target is a Clairic-style extractor. [Cloudflare's note](https://blog.cloudflare.com/clairic-extraction-model) (19 October 2026) describes the outputs: a span of the original text, a number, a real calendar value, a duration, a list, an estimate with a band, or a short forecast. It reads the document once and does not write a JSON reply. The weights and the head code are not public. The four heads in this repo are this project's reading of those output types. Do not write that Cloudflare published them.
@@ -331,6 +333,40 @@ The piece that is exhausted is this matcher plus another legality rule. A next e
 - The two over-cap amounts are a property of the decoder, not of the head. `USD 1,486.75` is 10 tokens because of the currency prefix and the leading space the tokenizer attached. Any cap taken from the training maximum will refuse them.
 
 More notes of the same skeleton were already the round-4 conclusion, and the answer was no. More epochs on the current loss will move the training number that is already 968/970.
+
+## Computed fields, and whether to go back to the four heads
+
+A proposal was put to this note. Cloudflare's outputs include a copied span, a number, a calendar value, a duration, a list, an estimate, and a forecast. Some of those values are not written on the page. They are computed. The proposal said the span method cannot do a computed value, text is the only field the network must copy, dates and amounts showed no real difference, and the next agent should go back to the four heads.
+
+The exam does not support that. The comparison below is the same 74 fields. The four-head score is usually written 9/77 because it also counts 3 forecasts, all wrong. The span runs do not score forecasts. The plain span column is `outputs/predictions_highlighter.json`: the dot-product head, the question can see the note, no length cap, no chain. The last column is the blocked head plus the cap and the chain, `outputs/predictions_highlighter_blocked_chained.json`.
+
+| Kind | Four heads | Span, dot product only | Blocked span, cap, and chain |
+| --- | --- | --- | --- |
+| Dates | 1/20 | 14/20 | 14/20 |
+| Amounts | 0/12 | 4/12 | 7/12 |
+| Text | 8/21 | 8/21 | 15/21 |
+| Lists | 0/12 | 0/12 | 3/12 |
+| Estimates | 0/3 | 0/3 | 0/3 |
+| Shared fields | 9/74 | 28/74 | 42/74 |
+
+Six fields were right in both the four-head run and the plain span run. The plain span gained 22 and lost 3. Those 3 are missing text fields the four-head run had right: `e4-bills-01` insurer, `e4-ops-01` insurer, `e4-ops-04` permit. The chained score got those three back. Forty-three fields were wrong in both the four-head run and the plain span run.
+
+Printed dates are the gap. On the plain span run, `read_date` is 13/18. The calendar head is 1/22. A printed day is on the page. The program does not invent it. The calendar head emitted a day from a blended vector, and on `e4-bills-01` it wrote 4 July 2026 for a stamp that says 17 March 2026.
+
+Text did not move between the four heads and the plain span head. Both are 8/21. Copied strings on the plain span run are 3/13. Text is not the field the span method won. The later 15/21 includes the question block, the cap, and the chain. It is not the plain dot product.
+
+A computed value, in the span method, is the program. The network marks the pieces that are written. The program adds, multiplies, subtracts, counts the days, or adds the days. On the plain span run, before either rule: product 2/4, subtract 1/2, a due date 1/2, a day count 1/4, a sum 0/3, a median 0/3, a printed number 1/3. The four-head number head was 0/16 on this exam. `e4-bills-01` asks for 1486.75 and that head wrote 2186.75. The plain span run returned nothing for that fee, because the mark was empty. Both are wrong. The invented number is the failure the span method was built to stop.
+
+After the cap and the chain, the computed counts are product 3/4, subtract 1/2, sum 2/3, due date 1/2, day count 1/4, median 0/3. Two of the sum and amount wins are a right total from tokens that are not all the gold tokens (`e4-ops-06` ancillary, `e4-bills-02` settle-by). Count those as program values, and keep the span count beside them.
+
+Lists are words on the page. The four-head point head and the plain span head both scored 0/12. The chain later scored 3/12. Estimates are the median of printed numbers. Both designs scored 0/3. Forecasts are not on the student page: the auditor deleted the tail. The span method skips them. The spread head scored 0/21 forecast steps on the training documents and 0/3 on this exam. Marking the page cannot be the whole answer for a forecast.
+
+Conclusion, for the next change:
+
+- Leave dates and amounts off the number head and the calendar head. On this exam those heads scored 0/12 amounts and 1/20 dates.
+- Do not describe the span method as text-only. The gain over the four heads is printed dates, plus a few amounts whose inputs were marked and then computed.
+- A value that is not written is computed by the program from marked inputs. The network still has to mark those inputs. The method fails when the mark is the wrong words. The program can add.
+- Lists, estimates, and forecasts are unsolved in both designs. Going back to the four heads does not repair them.
 
 ## How to reproduce the current numbers
 
