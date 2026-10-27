@@ -164,7 +164,9 @@ Estimate gold is the median of the listed comps, not an appraiser's judgment. Fo
 
 ## How training will use a row
 
-Not started. The intended loop, when a row is honest:
+Training has run. The latest four-head weights are `outputs/heads_round4.pt`. Round 4 is below. The later marking-only test is closed. Read `blogs/handoff-for-the-next-agent.md` before changing the model.
+
+The loop a row was built for:
 
 1. Freeze Gemma 4 E2B, including the large per-layer embedding tables. Run one forward pass on the clean text plus the questions. Turn thinking off.
 2. Point head: loss on the start token and the end token of each gold slice, in order for lists, and a missing score when the gold is null. A predicted slice of `HT-908` is a miss.
