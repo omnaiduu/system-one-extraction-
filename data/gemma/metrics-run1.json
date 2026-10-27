@@ -1,0 +1,146 @@
+{
+  "train": {
+    "n": 560,
+    "pointer_exact": 0.0,
+    "total_mae": 2433.07,
+    "null_accuracy": 1.0,
+    "samples": [
+      {
+        "order_id": "OD-95471",
+        "predicted_slice": " OD-95471",
+        "total": 6194.16,
+        "predicted_total": 5449.86,
+        "p_null_true": 1.0,
+        "p_null_pred": 0.999
+      },
+      {
+        "order_id": "A-89968",
+        "predicted_slice": " A-89968",
+        "total": 653.52,
+        "predicted_total": 5517.0,
+        "p_null_true": 0.0,
+        "p_null_pred": 0.034
+      },
+      {
+        "order_id": "INV-64454",
+        "predicted_slice": " INV-64454",
+        "total": 5409.88,
+        "predicted_total": 5425.27,
+        "p_null_true": 1.0,
+        "p_null_pred": 1.0
+      },
+      {
+        "order_id": "OD-67169",
+        "predicted_slice": " OD-67169",
+        "total": 2088.24,
+        "predicted_total": 5999.44,
+        "p_null_true": 1.0,
+        "p_null_pred": 1.0
+      },
+      {
+        "order_id": "A-15491",
+        "predicted_slice": " A-15491",
+        "total": 6463.75,
+        "predicted_total": 5445.85,
+        "p_null_true": 1.0,
+        "p_null_pred": 0.999
+      },
+      {
+        "order_id": "INV-18775",
+        "predicted_slice": " INV-18775",
+        "total": 6820.52,
+        "predicted_total": 5878.8,
+        "p_null_true": 1.0,
+        "p_null_pred": 0.999
+      },
+      {
+        "order_id": "ZZ-38128",
+        "predicted_slice": " ZZ-38128",
+        "total": 749.56,
+        "predicted_total": 4627.37,
+        "p_null_true": 1.0,
+        "p_null_pred": 0.999
+      },
+      {
+        "order_id": "A-58576",
+        "predicted_slice": " A-58576",
+        "total": 2473.54,
+        "predicted_total": 5581.28,
+        "p_null_true": 1.0,
+        "p_null_pred": 0.999
+      }
+    ]
+  },
+  "test": {
+    "n": 140,
+    "pointer_exact": 0.0,
+    "total_mae": 2234.25,
+    "null_accuracy": 1.0,
+    "samples": [
+      {
+        "order_id": "ZZ-60409",
+        "predicted_slice": " ZZ-60409",
+        "total": 3253.16,
+        "predicted_total": 5391.55,
+        "p_null_true": 0.0,
+        "p_null_pred": 0.004
+      },
+      {
+        "order_id": "ZZ-52246",
+        "predicted_slice": " ZZ-52246",
+        "total": 4114.07,
+        "predicted_total": 4654.11,
+        "p_null_true": 0.0,
+        "p_null_pred": 0.0
+      },
+      {
+        "order_id": "OD-54725",
+        "predicted_slice": " OD-54725",
+        "total": 4154.33,
+        "predicted_total": 5223.07,
+        "p_null_true": 1.0,
+        "p_null_pred": 0.999
+      },
+      {
+        "order_id": "OD-92548",
+        "predicted_slice": " OD-92548",
+        "total": 2034.11,
+        "predicted_total": 4604.28,
+        "p_null_true": 0.0,
+        "p_null_pred": 0.001
+      },
+      {
+        "order_id": "A-58492",
+        "predicted_slice": " A-58492",
+        "total": 6207.39,
+        "predicted_total": 5101.95,
+        "p_null_true": 1.0,
+        "p_null_pred": 0.998
+      },
+      {
+        "order_id": "A-98190",
+        "predicted_slice": " A-98190",
+        "total": 497.66,
+        "predicted_total": 5106.91,
+        "p_null_true": 1.0,
+        "p_null_pred": 0.999
+      },
+      {
+        "order_id": "ZZ-29112",
+        "predicted_slice": " ZZ-29112",
+        "total": 1924.87,
+        "predicted_total": 4801.01,
+        "p_null_true": 1.0,
+        "p_null_pred": 0.994
+      },
+      {
+        "order_id": "INV-33997",
+        "predicted_slice": " INV-33997",
+        "total": 5567.53,
+        "predicted_total": 4363.28,
+        "p_null_true": 0.0,
+        "p_null_pred": 0.0
+      }
+    ]
+  }
+}

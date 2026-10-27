@@ -1,6 +1,11 @@
 __pycache__/
 .pytest_cache/
 *.py[cod]
+*.pyc
 outputs/cache/
 models/
 .venv/
+.kaggle/
+**/*secret*
+**/*.token
+.DS_Store/
