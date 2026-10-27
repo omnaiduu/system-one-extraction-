@@ -164,7 +164,7 @@ Estimate gold is the median of the listed comps, not an appraiser's judgment. Fo
 
 ## How training will use a row
 
-Training has run. The latest four-head weights are `outputs/heads_round4.pt`. Round 4 is below. The later marking-only test is closed. Read `blogs/handoff-for-the-next-agent.md` before changing the model.
+Training has run. The latest four-head weights are `outputs/heads_round4.pt`. Round 4 is below. A later test that only marked words failed, and that code is gone. Read `blogs/handoff-for-the-next-agent.md` before changing the model.
 
 The loop a row was built for:
 
@@ -309,7 +309,7 @@ Point, number, and calendar are under half, and each has at least 8 fields on th
 
 ## Marking test, closed
 
-One later test dropped the number head and the calendar head and tried to mark every answer, then let a program do the sum or the date. That test failed. It is not the path. A number or a date is often not on the page, or it is written in words, so there is nothing to mark. The four heads are what the next work uses. They are not good enough as trained. They need a different way of being put to use. Do not continue the marking test. The short note is `blogs/handoff-for-the-next-agent.md`.
+One later test dropped the number head and the calendar head and tried to mark every answer, then let a program do the sum or the date. That test failed. A number or a date is often not on the page, or it is written in words, so there is nothing to mark. The code and the score files from that test are gone. The four heads are the path. They are not good enough as trained. The next work is a different way of putting them to use. The short note is `blogs/handoff-for-the-next-agent.md`.
 
 ## What the blog must not say
 
@@ -330,13 +330,12 @@ One later test dropped the number head and the calendar head and tried to mark e
 - `data/audited/report.json` — counts and drop reasons.
 - `data/generalization/raw/` — the locked 24-document exam, brackets still present. `locked.jsonl` is the audited form.
 - `extractor/labels.py`, `heads.py`, `gemma_cache.py`, `train_heads.py`, `score_heads.py` — question packing, the four heads, the tiny-vocabulary forward, training, and exact-match scoring.
-- `extractor/highlight.py`, `extractor/train_highlighter.py` — the closed marking test. Do not extend it.
 - `data/round2/raw/` — 98 added training documents, brackets still present. `data/round2/audited.jsonl` is the measured form. All of it is train. None of it was put into val or test.
 - `data/exam2/raw/` and `data/exam2/locked.jsonl` — the fresh 24-document exam. This is the round 2 claim. The first exam was not scored again.
 - `data/exam3/raw/` and `data/exam3/locked.jsonl` — the third 24-document exam. This is the round 3 claim. The first two exams were not scored again.
 - `data/round3/raw/` — 62 added training documents, brackets still present. `data/round3/audited.jsonl` is the measured form. All of it is train. None of it was put into val or test.
 - `data/exam4/raw/` and `data/exam4/locked.jsonl` — the fourth 24-document exam. This is the round 4 claim. The first three exams were not scored again.
-- `outputs/heads_round4.pt` and `outputs/scores_round4.json` — the four-head run on 200 documents, scored once on exam 4. Earlier round files are `outputs/heads.pt`, `heads_round2.pt`, and `heads_round3.pt`. Highlighter score files under `outputs/` are the closed test. `outputs/cache/` is gitignored.
+- `outputs/heads_round4.pt` and `outputs/scores_round4.json` — the four-head run on 200 documents, scored once on exam 4. Earlier round files are `outputs/heads.pt`, `heads_round2.pt`, and `heads_round3.pt`. `outputs/cache/` is gitignored.
 - `blogs/mark-and-measure.md` — how the training rows are made, and what the four rounds scored.
 - `blogs/handoff-for-the-next-agent.md` — the path from here. Four heads, used a different way. The marking test is closed.
 

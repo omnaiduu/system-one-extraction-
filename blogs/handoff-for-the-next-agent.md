@@ -4,4 +4,4 @@ Marking the words, and letting a program read them, is not enough. A number or a
 
 The four heads we already trained are also not enough. We still have to use them. The next work is a different way of putting those four heads to use. Do not start another marking-only run.
 
-The four heads are point, number, calendar, and spread, on frozen Gemma 4 E2B. Training code is `extractor/train_heads.py`. The latest weights are `outputs/heads_round4.pt`. On the fourth exam that run got 9 of 77 fields. The marking test is closed. Leave it.
+The four heads are point, number, calendar, and spread, on frozen Gemma 4 E2B. Training code is `extractor/train_heads.py`. The latest weights are `outputs/heads_round4.pt`. On the fourth exam that run got 9 of 77 fields. The marking test is closed. Its code is not in this repo.

@@ -21,7 +21,6 @@ import torch
 from safetensors import safe_open
 from transformers import AutoConfig, AutoTokenizer, Gemma4TextModel
 
-from extractor.highlight import align_row, expand_highlighter, raw_index
 from extractor.labels import (
     char_span_to_tokens,
     document_token_indexes,
@@ -36,8 +35,6 @@ SNAPSHOT = Path(
 )
 PREFIX = "model.language_model."
 CACHE = Path("outputs/cache/docs")
-HIGHLIGHT_CACHE = Path("outputs/cache/highlight")
-HIGHLIGHT_BLOCKED = Path("outputs/cache/highlight_blocked")
 
 SOURCES = (
     ("train", Path("data/audited/train.jsonl")),
@@ -83,17 +80,13 @@ def load_rows() -> list[dict]:
     return rows
 
 
-def encode_rows(rows: list[dict], expand_fn=expand_document, snapshot: Path = SNAPSHOT) -> tuple[list[dict], list[int]]:
+def encode_rows(rows: list[dict], snapshot: Path = SNAPSHOT) -> tuple[list[dict], list[int]]:
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     tokenizer = AutoTokenizer.from_pretrained(snapshot)
     encoded = []
     used: set[int] = set()
     for row in rows:
-        expanded = expand_fn(row)
-        if isinstance(expanded, tuple):
-            questions, skipped = expanded
-        else:
-            questions, skipped = expanded, []
+        questions = expand_document(row)
         prompt, spans = pack_prompt(row["text"], questions)
         if not prompt.startswith(row["text"]):
             raise RuntimeError(f"{row['id']} document is not the prompt prefix")
@@ -145,9 +138,6 @@ def encode_rows(rows: list[dict], expand_fn=expand_document, snapshot: Path = SN
                 item["step"] = question["step"]
             else:
                 raise RuntimeError(question["head"])
-            for key in ("recipe", "part", "role"):
-                if key in question:
-                    item[key] = question[key]
             packed.append(item)
         if allowed != list(range(len(allowed))):
             raise RuntimeError(f"{row['id']} document tokens are not a prefix of the prompt")
@@ -160,8 +150,6 @@ def encode_rows(rows: list[dict], expand_fn=expand_document, snapshot: Path = SN
                 "doc_positions": allowed,
                 "doc_offsets": [offsets[index] for index in allowed],
                 "questions": packed,
-                "skipped": skipped,
-                "doc_tokens": len(allowed),
             }
         )
         used.update(ids)
@@ -219,46 +207,16 @@ def lookup_table(token_ids: list[int]) -> torch.Tensor:
     return table
 
 
-def apply_question_block(mask: torch.Tensor, doc_tokens: int) -> torch.Tensor:
-    """Stop question tokens from attending to text tokens. Text rows stay as they were."""
-    if doc_tokens < 0 or doc_tokens > mask.shape[-1]:
-        raise ValueError(f"doc_tokens {doc_tokens} does not fit mask {tuple(mask.shape)}")
-    blocked = mask.clone()
-    blocked[:, :, doc_tokens:, :doc_tokens] = torch.finfo(blocked.dtype).min
-    return blocked
-
-
-def question_block_masks(model: Gemma4TextModel, seq_len: int, doc_tokens: int) -> dict[str, torch.Tensor]:
-    """Library causal masks, plus the question/text block, for both layer types."""
-    from transformers.masking_utils import create_causal_mask, create_sliding_window_causal_mask
-
-    # The model builds this mask in the embedding dtype. A wider dtype changes the later layers.
-    embeds = torch.zeros(1, seq_len, 1, dtype=model.embed_tokens.weight.dtype)
-    config = model.config
-    full = create_causal_mask(config, embeds, None, None, None, allow_is_causal_skip=False)
-    sliding = create_sliding_window_causal_mask(config, embeds, None, None, None, allow_is_causal_skip=False)
-    if not isinstance(full, torch.Tensor) or not isinstance(sliding, torch.Tensor):
-        raise RuntimeError("Gemma did not build a dense attention mask")
-    return {
-        "full_attention": apply_question_block(full, doc_tokens),
-        "sliding_attention": apply_question_block(sliding, doc_tokens),
-    }
-
-
 def forward_document(
     model: Gemma4TextModel,
     table: torch.Tensor,
     token_ids: list[int],
-    doc_tokens: int | None = None,
 ) -> torch.Tensor:
     mapped = table[torch.tensor(token_ids, dtype=torch.long)]
     if (mapped < 0).any():
         raise RuntimeError("a token was not copied into the tiny vocabulary")
-    kwargs = {}
-    if doc_tokens is not None:
-        kwargs["attention_mask"] = question_block_masks(model, len(token_ids), doc_tokens)
     with torch.inference_mode():
-        hidden = model(input_ids=mapped.view(1, -1), use_cache=False, **kwargs).last_hidden_state[0]
+        hidden = model(input_ids=mapped.view(1, -1), use_cache=False).last_hidden_state[0]
     return hidden.to(dtype=torch.float16).cpu()
 
 
@@ -272,7 +230,6 @@ def write_cache(
     limit: int,
     root: Path = CACHE,
     snapshot: Path = SNAPSHOT,
-    block_questions: bool = False,
 ) -> None:
     chosen = encoded[:limit] if limit else encoded
     pending = [item for item in chosen if not cache_path(item["split"], item["id"], root).exists()]
@@ -284,36 +241,11 @@ def write_cache(
     model = build_model(len(token_ids), snapshot)
     load_weights(model, token_ids, snapshot)
     table = lookup_table(token_ids)
-    if block_questions:
-        # This CPU bf16 forward does not repeat itself when several threads split a matmul.
-        # One thread keeps the text states identical to the open causal read.
-        torch.set_num_threads(1)
     root.mkdir(parents=True, exist_ok=True)
     for item in pending:
         clock = time.perf_counter()
-        hidden = forward_document(
-            model,
-            table,
-            item["input_ids"],
-            item["doc_tokens"] if block_questions else None,
-        )
+        hidden = forward_document(model, table, item["input_ids"])
         doc_states = hidden[item["doc_positions"]]
-        if block_questions and not any(root.glob("*.pt")):
-            if item["doc_tokens"] >= hidden.shape[0]:
-                raise RuntimeError(f"{item['id']} has no question tokens to block")
-            open_hidden = forward_document(model, table, item["input_ids"])
-            gap = (doc_states.float() - open_hidden[item["doc_positions"]].float()).abs().max().item()
-            question_gap = (
-                hidden[item["doc_tokens"]:].float() - open_hidden[item["doc_tokens"]:].float()
-            ).abs().max().item()
-            print(
-                f"text states vs the open read, max abs {gap:.6f}; question states {question_gap:.6f}",
-                flush=True,
-            )
-            if gap > 1e-3:
-                raise RuntimeError("blocking the question changed the saved text states")
-            if question_gap == 0:
-                raise RuntimeError("blocking the question left the question states unchanged")
         questions = []
         for question in item["questions"]:
             saved = dict(question)
@@ -327,8 +259,6 @@ def write_cache(
             "doc_states": doc_states,
             "doc_offsets": item["doc_offsets"],
             "questions": questions,
-            "skipped": item.get("skipped", []),
-            "blocked": block_questions,
         }
         destination = cache_path(item["split"], item["id"], root)
         torch.save(record, destination)
@@ -336,46 +266,17 @@ def write_cache(
         print(f"cached {item['split']} {item['id']} tokens={len(item['input_ids'])} seconds={elapsed:.1f}", flush=True)
 
 
-def load_highlighter_rows() -> list[dict]:
-    """Same documents and splits. Spans come from the original marks, re-checked against the audited values."""
-    raws = raw_index()
-    rows = []
-    seen = set()
-    for split, path in source_paths():
-        for line in path.read_text().splitlines():
-            if not line.strip():
-                continue
-            audited = json.loads(line)
-            if audited["id"] in seen:
-                raise RuntimeError(f"duplicate document id {audited['id']}")
-            seen.add(audited["id"])
-            if audited["id"] not in raws:
-                raise RuntimeError(f"no marked source for {audited['id']}")
-            fresh = align_row(audited, raws[audited["id"]])
-            fresh["_split"] = split
-            rows.append(fresh)
-    return rows
-
-
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=0, help="cache only the first N documents; 0 means all")
-    parser.add_argument("--highlighter", action="store_true", help="cache span questions for the single highlighter")
-    parser.add_argument("--blocked", action="store_true", help="question tokens cannot attend to the text")
     parser.add_argument("--snapshot", type=Path, default=None, help="local Gemma snapshot directory")
     args = parser.parse_args()
     snapshot = args.snapshot or Path(os.environ.get("GEMMA_SNAPSHOT", SNAPSHOT))
-    # A blocked run must stay on one thread from the start. Raising the count and
-    # then lowering it still lets this bf16 forward disagree with itself.
-    torch.set_num_threads(1 if args.blocked else (os.cpu_count() or 4))
-    rows = load_highlighter_rows() if args.highlighter else load_rows()
-    expand_fn = expand_highlighter if args.highlighter else expand_document
-    encoded, token_ids = encode_rows(rows, expand_fn, snapshot)
+    torch.set_num_threads(os.cpu_count() or 4)
+    rows = load_rows()
+    encoded, token_ids = encode_rows(rows, snapshot)
     print(f"documents={len(encoded)} unique_tokens={len(token_ids)}", flush=True)
-    if args.blocked and not args.highlighter:
-        raise RuntimeError("the question block is part of the highlighter run")
-    root = HIGHLIGHT_BLOCKED if args.blocked else HIGHLIGHT_CACHE if args.highlighter else CACHE
-    write_cache(encoded, args.limit, root, snapshot, block_questions=args.blocked)
+    write_cache(encoded, args.limit, CACHE, snapshot)
 
 
 if __name__ == "__main__":
