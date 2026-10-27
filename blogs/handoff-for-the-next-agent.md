@@ -4,7 +4,7 @@ This is the operational note. `blogs/mark-and-measure.md` is the essay log of th
 
 The current student is a frozen Gemma 4 E2B, one forward, one point head, and a program that reads the marked characters. On the latest 24-document exam the program's value is **42 of 74** fields, **4 of 24** documents. The same head is right on **968 of 970** training fields. The last change that retrained anything moved that exam by one field. The two changes after it were rules on scores that were already trained, and they are used up.
 
-Do not move dates and amounts back onto the old number head and calendar head. On this exam those heads scored 0/12 amounts and 1/20 dates. The span method's gain is printed dates, not text. Computed values stay with the program, and the network's job is to mark the inputs. The full comparison is in "Computed fields, and whether to go back to the four heads."
+A value that is not written on the page cannot be a span. The span method only covers a computation when a program was already coded for that exact rule and the inputs are text that program can parse. A number or a date written in words, or a computation outside those rules, needs a model trained to emit the value. The earlier conclusion that said "leave dates and amounts on the program" is withdrawn. The reason is in "Where that conclusion is wrong."
 
 ## What was fixed before any of this code
 
@@ -361,12 +361,35 @@ After the cap and the chain, the computed counts are product 3/4, subtract 1/2, 
 
 Lists are words on the page. The four-head point head and the plain span head both scored 0/12. The chain later scored 3/12. Estimates are the median of printed numbers. Both designs scored 0/3. Forecasts are not on the student page: the auditor deleted the tail. The span method skips them. The spread head scored 0/21 forecast steps on the training documents and 0/3 on this exam. Marking the page cannot be the whole answer for a forecast.
 
-Conclusion, for the next change:
+The table above is the score. It is not a decision about fields whose answer is not a span.
 
-- Leave dates and amounts off the number head and the calendar head. On this exam those heads scored 0/12 amounts and 1/20 dates.
-- Do not describe the span method as text-only. The gain over the four heads is printed dates, plus a few amounts whose inputs were marked and then computed.
-- A value that is not written is computed by the program from marked inputs. The network still has to mark those inputs. The method fails when the mark is the wrong words. The program can add.
-- Lists, estimates, and forecasts are unsolved in both designs. Going back to the four heads does not repair them.
+## Where that conclusion is wrong
+
+The conclusion that used to stand here said: leave dates and amounts off the number head and the calendar head, let the program compute, and send the network back only to mark inputs. That conclusion is withdrawn. It is logically flawed.
+
+It treats "the answer is not printed" as "the answer is a sum of clean numbers the program already knows." This repository only programs six computations: sum, product, subtract, days between two dates, add days, and the median of an even list of figures. Each one needs the inputs as text that `parse_number` or `parse_date` can read. A digit string. A date the parser already accepts.
+
+That is not the general case.
+
+- Sometimes the number is not on the page. The sum, the balance, the due amount was deliberately left unprinted. There is no span of the answer. Pointing at tokens cannot emit it. The program can emit it only if someone already coded that formula and the parts are spans it can parse.
+- Sometimes the date is not on the page. "Credit runs 14 days from 2 Apr 2026" has a start and a count. The due date itself was not written. A span head has nothing to mark for the due date. A calendar head is the output that can emit `2026-04-16`.
+- Sometimes the number is written in words. "Fourteen hundred," "two lakh," "net thirty." A span of those words is still words. No parser in this repo turns arbitrary wording into a number. Adding another length cap does not do it either.
+- Sometimes the date is written in words, or in a form the parser does not accept. A span returns the words. It does not return a calendar value.
+- Any computation that is not one of those six ops has no program. The span method then has no answer at all.
+
+The exam scores were used as if they closed this. They do not. The 14 of 20 dates are mostly printed dates, `read_date` 13/18. The amounts the span run got right are digit strings, or digit strings run through a programmed op. This synthetic set was built so the writer never prints the total and always leaves clean parts. Winning on that set shows the program can add the cases it was coded for. It does not show the program can read a number out of prose, or compute a rule nobody wrote down.
+
+Using "the calendar head scored 1/20 on printed dates" to forbid a trained head for dates that are not printed is the flaw. Those are different outputs. A printed day can be a span. A day that is not on the page cannot.
+
+Forecasts were already this hole. The answer was deleted from the page, so the span method skips them, and the spread head also scored 0. The same hole is every unprinted number and every unprinted date, once the wording or the formula leaves the six coded ops.
+
+What stands, as the correction:
+
+- Text that is copied, and only that, has to be a span. There is nothing to compute. The characters are the answer.
+- A number or a date that is not on the page cannot be spanned. The output has to come from a model trained to emit it: the number head, the calendar head, or a later head with that job. A program is not a substitute unless the formula and the parse are already coded for that exact case.
+- A number or a date written in words is the same problem. The span is words. The required output is a number or a calendar value. This codebase cannot do that conversion programmatically for the ways people write them.
+- The span-plus-program path is not capable of those edge cases. More decode rules will not make it capable. The model has to be trained to output the computed value.
+- The score table stays in the note so the next agent can see what this particular exam measured. It is not a reason to keep dates and amounts off a head that emits them.
 
 ## How to reproduce the current numbers
 
