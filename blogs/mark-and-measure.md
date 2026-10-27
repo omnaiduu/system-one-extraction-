@@ -305,97 +305,9 @@ Point, number, and calendar are under half, and each has at least 8 fields on th
 
 200 synthetic training documents is the stop for this set. Another 60 notes of the same shape would teach the same skeleton. The miss is no longer "the head cannot see the document." The head sees the document, fits 214 of 216 training amounts, and writes the wrong amount on every new bill in this exam. Real customer mail is still not on disk.
 
-## Highlighter
+## Marking test, closed
 
-The number head and the calendar head were dropped for this run. One point head remains. It is the same head as before: the last token of the question has already seen the text, and the head marks a start token and an end token. No new documents were written. The training texts are the same 200. The four 24-document exams already on disk were scored after the epoch was frozen. They were not used to pick the epoch. They had already been read when this run was chosen, so this is a re-check, not a new exam.
-
-Each printed value, and each piece of a sum, product, subtraction, day count, due date, or median, is a span question. A list is still Item 1, Item 2, and one extra item whose answer is missing. A sum is Part 1, Part 2, and one extra part whose answer is missing. A day count is two named spans, the start date and the end date. The program reads the marked characters and applies the same rule the auditor used. A forecast is not in this score. Its answer was removed from the text, so there is no span to mark. Exam 4 has 3 of those, which is why this score has 74 fields and round 4 had 77.
-
-Epoch 70 of 80 had the highest training field span exact-match, 959/970. The run did not extend. The missing threshold stayed 0.5. On that checkpoint the program's value matches the span: 959/970 training fields, 183/200 training documents. Random initialization is the "before" column.
-
-| Split | Fields | Before | After | Documents after |
-| --- | --- | --- | --- | --- |
-| Train, 200 docs | 970 | 22/970 | 959/970 | 183/200 |
-| Val, the original 4 | 24 | 1/24 | 4/24 | 0/4 |
-| Test, the original 4 | 24 | 0/24 | 5/24 | 0/4 |
-| First exam, scored again | 109 | 4/109 | 36/109 | 0/24 |
-| Second exam, scored again | 92 | 4/92 | 26/92 | 1/24 |
-| Third exam, scored again | 92 | 2/92 | 24/92 | 0/24 |
-| Fourth exam, scored again | 74 | 5/74 | 28/74 | 1/24 |
-
-On the fourth exam, by kind: dates 14/20, the one datetime 1/1, durations 1/4, estimates 0/3, lists 0/12, amounts 4/12, text 8/21, the one time 0/1. By rule: a printed date 13/18, a due date 1/2, a day count 1/4, a copied string 3/13, a list 0/12, a median 0/3, a missing field 5/8, a product 2/4, a printed number 1/3, a subtraction 1/2, a sum 0/3. One document is right, `e4-bills-05`.
-
-Round 4 on this same exam wrote amounts 0/12 and dates 1/20. The date move is the copied span. A printed day was already the kind of thing the point head could mark. The calendar head had been inventing a day from the question vector. The amount move is smaller, 0/12 to 4/12, and the three sums on this exam are 0/3. The program is not what missed. The mark missed, and the program then had nothing it could add.
-
-A wrong mark does not come back as a different money figure. On `e4-bills-01` the fee span was empty, so the program returned nothing. Round 4's number head had written 2186.75 for a fee of 1486.75. Lists still grab a long stretch of the note instead of one item. `e4-bills-02` marks most of the bill as the second charge name. Estimates are 0/3 here and 21/21 on the training notes. The highlighter fit the 200 texts. It did not learn to mark a new note.
-
-## Question block
-
-The next run keeps that same highlighter and the same program. Two things change. In the one forward, a question token cannot attend to the text. It can attend to itself and to earlier question tokens. The text tokens stay on the ordinary causal read: positions are unchanged, and on the first note the largest absolute gap between the blocked text states and an open read was 0. The question states did move. The largest absolute gap there was 69.5. Several CPU threads make this bf16 forward disagree with itself, so the blocked cache was written on one thread. The missing score also reads the best start match and the best end match, along with the question vector.
-
-No new documents were written. Training is the same 200 texts. The four exams already on disk were scored after the epoch was frozen. Epoch 80 was still inside the rising window, so the run extended to 100. Epoch 85 had the highest training field span exact-match, 962/970. The threshold stayed 0.5. All three thresholds, 0.5, 0.3, and 0.7, scored 2/24 on the four validation notes, so the earlier one stayed. Training value is 963/970, and 186/200 training documents are fully right. The one field whose span is wrong and whose value is still right is `r3-bills-14` balance: the marked tokens are off, and the characters still subtract to 1259.50.
-
-| Split | Fields | Question can see the text | Question blocked | Documents, blocked |
-| --- | --- | --- | --- | --- |
-| Train, 200 docs | 970 | 959/970 | 962/970 | 186/200 |
-| Val, the original 4 | 24 | 4/24 | 2/24 | 0/4 |
-| Test, the original 4 | 24 | 5/24 | 5/24 | 0/4 |
-| First exam, scored again | 109 | 36/109 | 39/109 | 0/24 |
-| Second exam, scored again | 92 | 26/92 | 32/92 | 1/24 |
-| Third exam, scored again | 92 | 24/92 | 38/92 | 1/24 |
-| Fourth exam, scored again | 74 | 28/74 | 29/74 | 0/24 |
-
-On the fourth exam, by kind: dates 12/20, the one datetime 1/1, durations 1/4, estimates 0/3, lists 0/12, amounts 2/12, text 13/21, the one time 0/1. By rule: a printed date 12/18, a due date 0/2, a day count 1/4, a copied string 5/13, a list 0/12, a median 0/3, a missing field 8/8, a product 2/4, a printed number 0/3, a subtraction 0/2, a sum 0/3.
-
-The check for this run was the lists and the sums. Both stayed at zero. Lists still run past the item. On `e4-bills-02` the third charge name is the right span and the extra item is correctly missing, and the first two names continue through the rest of the bill. Sums are 0/3. Training did stay high, 962/970 against 959/970 when the question could see the text, so the question state can be trained without having already read the answer in that same vector.
-
-What moved on the fourth exam is the missing call and a few copied strings. Missing fields are 8/8, up from 5/8. Copied strings are 5/13, up from 3/13. `e4-series-03` now marks `Saint-Laurent-du-Maroni` and leaves the rest of the note. Dates are 12/20, down from 14/20. Amounts are 2/12, down from 4/12. `e4-bills-05` had been the one fully right document. Its balance span is empty now, so 2825.50 is gone, and no fourth-exam document is fully right. The third exam moved more, 24/92 to 38/92, with `e3-ops-05` fully right.
-
-## Span cap
-
-The blocked head still picked the start and the end separately. Each one was the single highest score. On a short item that often put the end many tokens later, or put the end before the start. The training notes already say how long these spans are. A list item is at most 8 tokens. A sum part is at most 11. A copied string is at most 10. A printed number is at most 9. A printed date is at most 10. The readout now keeps the start and end pair with the highest combined score whose length is inside that training maximum. The weights are the blocked head from the previous run. The missing threshold stays 0.5. Nothing was retrained, and the cap was not used to choose the epoch.
-
-No gold training span is longer than its own cap. Two gold spans on the fourth exam are. Both are printed amounts with a currency prefix, `USD 1,486.75` and `USD 2,075.40`, 10 tokens against a training maximum of 9. The cap cannot mark those two.
-
-| Split | Question blocked | Same head, span capped | Documents, capped |
-| --- | --- | --- | --- |
-| Train, 200 docs | 963/970 | 967/970 | 191/200 |
-| Val, the original 4 | 2/24 | 5/24 | 0/4 |
-| Test, the original 4 | 5/24 | 9/24 | 0/4 |
-| First exam, scored again | 39/109 | 48/109 | 0/24 |
-| Second exam, scored again | 32/92 | 39/92 | 1/24 |
-| Third exam, scored again | 38/92 | 48/92 | 1/24 |
-| Fourth exam, scored again | 29/74 | 39/74 | 3/24 |
-
-The first two count columns are the program's value. The token span is one field lower on the training notes, on the first exam, and on the fourth exam. On the fourth exam that field is `e4-bills-02` settle by: the day-count tokens are not the gold tokens, and the characters still read as 21 days, so the date is 2026-06-25. On the training notes the extra value is still `r3-bills-14` balance, 1259.50.
-
-On the fourth exam, by kind: dates 14/20, the one datetime 1/1, durations 1/4, estimates 0/3, lists 1/12, amounts 6/12, text 15/21, the one time 1/1. By rule: a printed date 13/18, a due date 1/2, a day count 1/4, a copied string 7/13, a list 1/12, a median 0/3, a missing field 8/8, a product 3/4, a printed number 1/3, the one time 1/1, a subtraction 1/2, a sum 1/3.
-
-The list is `e4-support-01`, the phrases reef spray, gust front, and low cloud. The sum is `e4-bills-06` materials, 553.75. Three documents are fully right: `e4-bills-05`, `e4-ops-01`, and `e4-support-01`. No fourth-exam field that was already right went wrong. The same cap on the earlier head, the one whose question can see the text, moves that fourth exam from 28/74 to 34/74. Lists there are 1/12 and sums stay 0/3.
-
-Eleven of the twelve lists are still wrong, and two of the three sums are still wrong. The cap removes the marks that run away to the bottom of the note. It does not teach the head which short span is the item.
-
-## Ordered parts
-
-A list and a sum were still choosing each part on its own. Two parts could mark the same short span, and a later part could sit to the left of an earlier one. The missing bit is unchanged. The parts marked present are now one chain. Each later part starts after the previous part ends. Each span stays inside the training length cap. The chain is the one with the highest total of start score plus end score. A copied string, a date, a product, and a due date stay on the separate picker. A due date's day count can sit before the date, so a text-order chain would make that gold pair illegal. Nothing was retrained. The chain was not used to choose the epoch.
-
-| Split | Span cap | Parts in order | Documents, ordered |
-| --- | --- | --- | --- |
-| Train, 200 docs | 967/970 | 968/970 | 192/200 |
-| Val, the original 4 | 5/24 | 5/24 | 0/4 |
-| Test, the original 4 | 9/24 | 9/24 | 0/4 |
-| First exam, scored again | 48/109 | 48/109 | 0/24 |
-| Second exam, scored again | 39/92 | 42/92 | 1/24 |
-| Third exam, scored again | 48/92 | 49/92 | 2/24 |
-| Fourth exam, scored again | 39/74 | 42/74 | 4/24 |
-
-The count columns are the program's value. On the fourth exam the token span is 40/74. Two fields parse to the right value from a mark whose tokens are off. `e4-bills-02` settle by still reads 21 days and lands on 2026-06-25. `e4-ops-06` ancillary marks `14.65`, `26.8`, and `7.35`. The middle tokens are not the gold tokens, and the three numbers add to 48.80.
-
-The new training field is `r3-support-13` notes. It had repeated its last item, and the chain now marks reset the door lock, cleaned the sill track, tightened the rope clamp, and tested the alarm bell. The one training list still wrong is `r2-support-16` to return, which shortens `marbled endpaper` to `paper`. That short span does not sit on another part, so the chain leaves it. Training lists are 135/136. Training sums are 31/31.
-
-On the fourth exam, lists are 3/12 and sums are 2/3. Amounts are 7/12. Dates stay 14/20. Text stays 15/21. The two new lists are `e4-bills-06` items, cedar sill board, galvanised hinge pair, and roofing felt roll, and `e4-support-05` tasks, linen count, candle stubs, and guest cards. The new sum is `e4-ops-06` ancillary, 48.80. Four documents are fully right: `e4-bills-05`, `e4-bills-06`, `e4-ops-01`, and `e4-support-01`. No field that was already right went wrong.
-
-Nine lists and one sum on the fourth exam are still wrong. The chain moves a repeated item and an item that sat out of order. It leaves a short edge that does not collide with another part, a distractor that is already in order, and a part the missing score drops.
+One later test dropped the number head and the calendar head and tried to mark every answer, then let a program do the sum or the date. That test failed. It is not the path. A number or a date is often not on the page, or it is written in words, so there is nothing to mark. The four heads are what the next work uses. They are not good enough as trained. They need a different way of being put to use. Do not continue the marking test. The short note is `blogs/handoff-for-the-next-agent.md`.
 
 ## What the blog must not say
 
@@ -404,7 +316,7 @@ Nine lists and one sum on the fourth exam are still wrong. The chain moves a rep
 - That the writer "just knows the character offsets." It knows the words. The program counts.
 - That 48 audited rows, or a future 30,000 cloned rows, are enough.
 - That estimate and forecast labels are real-world truth. They are rules applied to numbers the writer placed in the document.
-- That any training round is a production accuracy. Round 1 fit 213 of 221 training fields and 29 of 112 exam fields. Round 2 fit 744 of 769 training fields and 14 of 95 fields on a fresh exam. Round 3 fit 720 of 769 training fields and 15 of 95 fields on a third exam. Round 4 fit 948 of 991 training fields and 9 of 77 fields on a fourth exam. Amounts on that fourth exam were 0/12. Dates were 1/20. The highlighter re-check of that same fourth exam fit 959 of 970 training fields and 28 of 74 exam fields. Dates were 14/20. Amounts were 4/12. Sums were 0/3. Blocking the question from the text, on the same documents, fit 962 of 970 training fields and 29 of 74 fourth-exam fields. Lists stayed 0/12. Sums stayed 0/3. Missing fields were 8/8. Dates were 12/20. Amounts were 2/12. Capping each span at the longest training span of that operation, on that same blocked head, fit 967 of 970 training fields and 39 of 74 fourth-exam fields. Lists were 1/12. Sums were 1/3. Amounts were 6/12. Dates were 14/20. Placing list and sum parts in text order, on that same head, fit 968 of 970 training fields and 42 of 74 fourth-exam fields. Lists were 3/12. Sums were 2/3. Amounts were 7/12.
+- That any training round is a production accuracy. Round 4 fit 948 of 991 training fields and 9 of 77 fields on the fourth exam. Amounts were 0/12. Dates were 1/20.
 - That a passed auditor means the English is diverse. The auditor has no opinion about style. The repeated field shape is a quality bug it cannot see.
 
 ## File map
@@ -416,15 +328,15 @@ Nine lists and one sum on the fourth exam are still wrong. The chain moves a rep
 - `data/audited/report.json` — counts and drop reasons.
 - `data/generalization/raw/` — the locked 24-document exam, brackets still present. `locked.jsonl` is the audited form.
 - `extractor/labels.py`, `heads.py`, `gemma_cache.py`, `train_heads.py`, `score_heads.py` — question packing, the four heads, the tiny-vocabulary forward, training, and exact-match scoring.
-- `extractor/highlight.py`, `extractor/train_highlighter.py`, `tests/test_highlight.py` — one point head, the program that reads its marks, and the check that those marks reproduce every audited value.
+- `extractor/highlight.py`, `extractor/train_highlighter.py` — the closed marking test. Do not extend it.
 - `data/round2/raw/` — 98 added training documents, brackets still present. `data/round2/audited.jsonl` is the measured form. All of it is train. None of it was put into val or test.
 - `data/exam2/raw/` and `data/exam2/locked.jsonl` — the fresh 24-document exam. This is the round 2 claim. The first exam was not scored again.
 - `data/exam3/raw/` and `data/exam3/locked.jsonl` — the third 24-document exam. This is the round 3 claim. The first two exams were not scored again.
 - `data/round3/raw/` — 62 added training documents, brackets still present. `data/round3/audited.jsonl` is the measured form. All of it is train. None of it was put into val or test.
 - `data/exam4/raw/` and `data/exam4/locked.jsonl` — the fourth 24-document exam. This is the round 4 claim. The first three exams were not scored again.
-- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/heads_round2.pt` and `outputs/scores_round2.json` are the second run. `outputs/heads_round3.pt` and `outputs/scores_round3.json` are the document-reader run, scored once on exam 3. `outputs/heads_round4.pt` and `outputs/scores_round4.json` are the 200-document run, scored once on exam 4. `outputs/heads_highlighter.pt`, `outputs/scores_highlighter.json`, and `outputs/predictions_highlighter.json` are the single-highlighter re-check. `outputs/heads_highlighter_blocked.pt`, `outputs/scores_highlighter_blocked.json`, and `outputs/predictions_highlighter_blocked.json` are the same head after the question was blocked from the text. `outputs/scores_highlighter_blocked_capped.json` and `outputs/predictions_highlighter_blocked_capped.json` score that head again with the training span cap. `outputs/scores_highlighter_capped.json` and `outputs/predictions_highlighter_capped.json` put the same cap on the earlier head. `outputs/scores_highlighter_blocked_chained.json` and `outputs/predictions_highlighter_blocked_chained.json` place the list and sum parts of the blocked head in text order. `outputs/cache/` is the hidden-state cache on disk and is gitignored.
-- `blogs/mark-and-measure.md` — this note.
-- `blogs/handoff-for-the-next-agent.md` — the operational handoff. What was tried, why, which scores are a rescore of frozen weights, the 32 remaining exam-4 misses, and the correction that a number or a date not written on the page cannot be a span.
+- `outputs/heads_round4.pt` and `outputs/scores_round4.json` — the four-head run on 200 documents, scored once on exam 4. Earlier round files are `outputs/heads.pt`, `heads_round2.pt`, and `heads_round3.pt`. Highlighter score files under `outputs/` are the closed test. `outputs/cache/` is gitignored.
+- `blogs/mark-and-measure.md` — how the training rows are made, and what the four rounds scored.
+- `blogs/handoff-for-the-next-agent.md` — the path from here. Four heads, used a different way. The marking test is closed.
 
 ## Open threads for the essay
 
