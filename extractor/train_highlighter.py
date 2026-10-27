@@ -14,7 +14,7 @@ from pathlib import Path
 import torch
 
 from extractor.gemma_cache import HIGHLIGHT_BLOCKED, HIGHLIGHT_CACHE
-from extractor.heads import PointHead, choose_span, point_loss
+from extractor.heads import PointHead, choose_span, choose_spans, point_loss
 from extractor.highlight import dumps_public, group_questions, judge_group, summarize_highlighter
 
 OUT = Path("outputs")
@@ -84,6 +84,9 @@ def score_record(head: PointHead, record: dict, threshold: float, limits: dict[s
         predictions = [
             predict_span(head, question, record["doc_states"], threshold, limits) for question in group
         ]
+        op = group[0]["recipe"]["op"]
+        if op in {"list", "sum"}:
+            _chain_present_parts(head, group, record["doc_states"], predictions, limits[op])
         fields.append(judge_group(group, predictions, offsets, record["text"]))
     return {
         "id": record["id"],
@@ -93,6 +96,29 @@ def score_record(head: PointHead, record: dict, threshold: float, limits: dict[s
         "document_span": bool(fields) and all(field["span_exact"] for field in fields),
         "document_value": bool(fields) and all(field["value_exact"] for field in fields),
     }
+
+
+def _chain_present_parts(
+    head: PointHead,
+    group: list[dict],
+    doc_states: torch.Tensor,
+    predictions: list[dict],
+    limit: int,
+) -> None:
+    """List and sum parts keep their missing bits. Present parts are placed in text order."""
+    present = [index for index, prediction in enumerate(predictions) if not prediction["missing"]]
+    if len(present) < 2:
+        return
+    starts = []
+    ends = []
+    for index in present:
+        query = group[index]["q_state"].detach().float().unsqueeze(0)
+        outputs = head(doc_states.detach().float().unsqueeze(0), query)
+        starts.append(outputs["start"][0])
+        ends.append(outputs["end"][0])
+    for index, (start, end) in zip(present, choose_spans(starts, ends, limit)):
+        predictions[index]["start"] = start
+        predictions[index]["end"] = end
 
 
 def evaluate(
@@ -151,35 +177,45 @@ def rescore(records: list[dict], blocked: bool) -> None:
     payload = {
         "weights_file": f"outputs/heads_highlighter{suffix}.pt",
         "threshold": threshold,
-        "threshold_note": "Kept from the saved run. This cap was not used to choose the epoch or the threshold.",
+        "threshold_note": "Kept from the saved run. The cap and the chain were not used to choose the epoch or the threshold.",
         "span_limit_rule": (
-            "For each operation, the marked span may be at most as many tokens as the longest "
-            "gold span of that operation on the training documents. The chosen span is the pair "
-            "with the highest start score plus end score inside that length. The missing score is unchanged."
+            "For each operation, a span may be at most as many tokens as the longest gold span of that "
+            "operation on the training documents. A list or a sum places its present parts in one chain: "
+            "each later part starts after the previous part's end, and the chain is the one with the "
+            "highest total of start score plus end score. Other operations still pick each span on its own. "
+            "The missing score is unchanged."
         ),
         "span_limits": limits,
         "gold_spans_longer_than_the_training_max": longer,
         "blocked": blocked,
         "after": after,
         "readout": (
-            "same saved point head. A span is the best start-plus-end pair no longer than the "
-            "longest training span of that operation. The program then reads the marked characters."
+            "same saved point head. Each span stays inside the longest training span of that operation. "
+            "List and sum parts that are marked present are placed in text order, each one starting "
+            "after the previous one ends. The program then reads the marked characters."
         ),
     }
     OUT.mkdir(parents=True, exist_ok=True)
-    score_path = OUT / f"scores_highlighter{suffix}_capped.json"
-    pred_path = OUT / f"predictions_highlighter{suffix}_capped.json"
+    score_path = OUT / f"scores_highlighter{suffix}_chained.json"
+    pred_path = OUT / f"predictions_highlighter{suffix}_chained.json"
     score_path.write_text(dumps_public(payload))
     pred_path.write_text(dumps_public(predictions))
+    train = after["train"]
     exam = after["exam4"]
+    print(
+        f"train span {train['fields_span']['correct']}/{train['fields_span']['total']} "
+        f"value {train['fields_value']['correct']}/{train['fields_value']['total']}",
+        flush=True,
+    )
     print(
         f"exam4 span {exam['fields_span']['correct']}/{exam['fields_span']['total']} "
         f"value {exam['fields_value']['correct']}/{exam['fields_value']['total']}",
         flush=True,
     )
-    for op in ("list", "sum", "copy", "read_date", "median"):
-        row = exam["by_op_value"][op]
-        print(f"exam4 {op} {row['correct']}/{row['total']}", flush=True)
+    for split_name, summary in (("train", train), ("exam4", exam)):
+        for op in ("list", "sum"):
+            row = summary["by_op_value"][op]
+            print(f"{split_name} {op} {row['correct']}/{row['total']}", flush=True)
     print(f"wrote {score_path} {pred_path}", flush=True)
 
 
@@ -325,13 +361,14 @@ def main() -> None:
             "one point head. Question tokens cannot attend to the text. "
             "The missing score reads the question state and the best start and end match. "
             "The marked span is the best start-plus-end pair no longer than the longest "
-            "training span of that operation. The program reads the marked spans."
+            "training span of that operation. List and sum parts marked present are placed in "
+            "text order. The program reads the marked spans."
             if args.blocked
             else
             "one point head. The question-end state is the same causal state as before: "
             "it has seen the text and the question. The marked span is the best start-plus-end "
-            "pair no longer than the longest training span of that operation. "
-            "The program reads the marked spans."
+            "pair no longer than the longest training span of that operation. List and sum parts "
+            "marked present are placed in text order. The program reads the marked spans."
         ),
         "data": (
             "training texts are the existing 200. Exams are the four 24-document sets already on disk. "

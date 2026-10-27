@@ -12,6 +12,26 @@ def test_choose_span_keeps_the_short_pair_when_the_far_end_scores_higher():
     assert choose_span(start, end, limit=5) == (1, 4)
 
 
+def test_choose_spans_refuses_to_repeat_an_earlier_item():
+    from extractor.heads import choose_spans
+
+    first_start = torch.tensor([0.0, 5.0, 0.0, 1.0, 0.0])
+    first_end = torch.tensor([0.0, 4.0, 0.0, 0.0, 0.0])
+    second_start = torch.tensor([0.0, 5.0, 0.0, 3.0, 0.0])
+    second_end = torch.tensor([0.0, 4.0, 0.0, 0.0, 2.0])
+    assert choose_spans([first_start, second_start], [first_end, second_end], limit=4) == [(1, 1), (3, 4)]
+
+
+def test_choose_spans_can_shorten_the_first_span_so_the_second_fits():
+    from extractor.heads import choose_spans
+
+    first_start = torch.tensor([5.0, 0.0, 0.0])
+    first_end = torch.tensor([0.0, 4.0, 0.0])
+    second_start = torch.tensor([0.0, 6.0, 1.0])
+    second_end = torch.tensor([0.0, 5.0, 1.0])
+    assert choose_spans([first_start, second_start], [first_end, second_end], limit=3) == [(0, 0), (1, 1)]
+
+
 def test_choose_span_repairs_an_end_that_lands_before_the_start():
     from extractor.heads import choose_span
 

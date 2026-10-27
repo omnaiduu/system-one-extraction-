@@ -375,6 +375,28 @@ The list is `e4-support-01`, the phrases reef spray, gust front, and low cloud. 
 
 Eleven of the twelve lists are still wrong, and two of the three sums are still wrong. The cap removes the marks that run away to the bottom of the note. It does not teach the head which short span is the item.
 
+## Ordered parts
+
+A list and a sum were still choosing each part on its own. Two parts could mark the same short span, and a later part could sit to the left of an earlier one. The missing bit is unchanged. The parts marked present are now one chain. Each later part starts after the previous part ends. Each span stays inside the training length cap. The chain is the one with the highest total of start score plus end score. A copied string, a date, a product, and a due date stay on the separate picker. A due date's day count can sit before the date, so a text-order chain would make that gold pair illegal. Nothing was retrained. The chain was not used to choose the epoch.
+
+| Split | Span cap | Parts in order | Documents, ordered |
+| --- | --- | --- | --- |
+| Train, 200 docs | 967/970 | 968/970 | 192/200 |
+| Val, the original 4 | 5/24 | 5/24 | 0/4 |
+| Test, the original 4 | 9/24 | 9/24 | 0/4 |
+| First exam, scored again | 48/109 | 48/109 | 0/24 |
+| Second exam, scored again | 39/92 | 42/92 | 1/24 |
+| Third exam, scored again | 48/92 | 49/92 | 2/24 |
+| Fourth exam, scored again | 39/74 | 42/74 | 4/24 |
+
+The count columns are the program's value. On the fourth exam the token span is 40/74. Two fields parse to the right value from a mark whose tokens are off. `e4-bills-02` settle by still reads 21 days and lands on 2026-06-25. `e4-ops-06` ancillary marks `14.65`, `26.8`, and `7.35`. The middle tokens are not the gold tokens, and the three numbers add to 48.80.
+
+The new training field is `r3-support-13` notes. It had repeated its last item, and the chain now marks reset the door lock, cleaned the sill track, tightened the rope clamp, and tested the alarm bell. The one training list still wrong is `r2-support-16` to return, which shortens `marbled endpaper` to `paper`. That short span does not sit on another part, so the chain leaves it. Training lists are 135/136. Training sums are 31/31.
+
+On the fourth exam, lists are 3/12 and sums are 2/3. Amounts are 7/12. Dates stay 14/20. Text stays 15/21. The two new lists are `e4-bills-06` items, cedar sill board, galvanised hinge pair, and roofing felt roll, and `e4-support-05` tasks, linen count, candle stubs, and guest cards. The new sum is `e4-ops-06` ancillary, 48.80. Four documents are fully right: `e4-bills-05`, `e4-bills-06`, `e4-ops-01`, and `e4-support-01`. No field that was already right went wrong.
+
+Nine lists and one sum on the fourth exam are still wrong. The chain moves a repeated item and an item that sat out of order. It leaves a short edge that does not collide with another part, a distractor that is already in order, and a part the missing score drops.
+
 ## What the blog must not say
 
 - That Cloudflare published Clairic's head code. They published the output types. The four heads are our reading of those types.
@@ -382,7 +404,7 @@ Eleven of the twelve lists are still wrong, and two of the three sums are still 
 - That the writer "just knows the character offsets." It knows the words. The program counts.
 - That 48 audited rows, or a future 30,000 cloned rows, are enough.
 - That estimate and forecast labels are real-world truth. They are rules applied to numbers the writer placed in the document.
-- That any training round is a production accuracy. Round 1 fit 213 of 221 training fields and 29 of 112 exam fields. Round 2 fit 744 of 769 training fields and 14 of 95 fields on a fresh exam. Round 3 fit 720 of 769 training fields and 15 of 95 fields on a third exam. Round 4 fit 948 of 991 training fields and 9 of 77 fields on a fourth exam. Amounts on that fourth exam were 0/12. Dates were 1/20. The highlighter re-check of that same fourth exam fit 959 of 970 training fields and 28 of 74 exam fields. Dates were 14/20. Amounts were 4/12. Sums were 0/3. Blocking the question from the text, on the same documents, fit 962 of 970 training fields and 29 of 74 fourth-exam fields. Lists stayed 0/12. Sums stayed 0/3. Missing fields were 8/8. Dates were 12/20. Amounts were 2/12. Capping each span at the longest training span of that operation, on that same blocked head, fit 967 of 970 training fields and 39 of 74 fourth-exam fields. Lists were 1/12. Sums were 1/3. Amounts were 6/12. Dates were 14/20.
+- That any training round is a production accuracy. Round 1 fit 213 of 221 training fields and 29 of 112 exam fields. Round 2 fit 744 of 769 training fields and 14 of 95 fields on a fresh exam. Round 3 fit 720 of 769 training fields and 15 of 95 fields on a third exam. Round 4 fit 948 of 991 training fields and 9 of 77 fields on a fourth exam. Amounts on that fourth exam were 0/12. Dates were 1/20. The highlighter re-check of that same fourth exam fit 959 of 970 training fields and 28 of 74 exam fields. Dates were 14/20. Amounts were 4/12. Sums were 0/3. Blocking the question from the text, on the same documents, fit 962 of 970 training fields and 29 of 74 fourth-exam fields. Lists stayed 0/12. Sums stayed 0/3. Missing fields were 8/8. Dates were 12/20. Amounts were 2/12. Capping each span at the longest training span of that operation, on that same blocked head, fit 967 of 970 training fields and 39 of 74 fourth-exam fields. Lists were 1/12. Sums were 1/3. Amounts were 6/12. Dates were 14/20. Placing list and sum parts in text order, on that same head, fit 968 of 970 training fields and 42 of 74 fourth-exam fields. Lists were 3/12. Sums were 2/3. Amounts were 7/12.
 - That a passed auditor means the English is diverse. The auditor has no opinion about style. The repeated field shape is a quality bug it cannot see.
 
 ## File map
@@ -400,7 +422,7 @@ Eleven of the twelve lists are still wrong, and two of the three sums are still 
 - `data/exam3/raw/` and `data/exam3/locked.jsonl` — the third 24-document exam. This is the round 3 claim. The first two exams were not scored again.
 - `data/round3/raw/` — 62 added training documents, brackets still present. `data/round3/audited.jsonl` is the measured form. All of it is train. None of it was put into val or test.
 - `data/exam4/raw/` and `data/exam4/locked.jsonl` — the fourth 24-document exam. This is the round 4 claim. The first three exams were not scored again.
-- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/heads_round2.pt` and `outputs/scores_round2.json` are the second run. `outputs/heads_round3.pt` and `outputs/scores_round3.json` are the document-reader run, scored once on exam 3. `outputs/heads_round4.pt` and `outputs/scores_round4.json` are the 200-document run, scored once on exam 4. `outputs/heads_highlighter.pt`, `outputs/scores_highlighter.json`, and `outputs/predictions_highlighter.json` are the single-highlighter re-check. `outputs/heads_highlighter_blocked.pt`, `outputs/scores_highlighter_blocked.json`, and `outputs/predictions_highlighter_blocked.json` are the same head after the question was blocked from the text. `outputs/scores_highlighter_blocked_capped.json` and `outputs/predictions_highlighter_blocked_capped.json` score that head again with the training span cap. `outputs/scores_highlighter_capped.json` and `outputs/predictions_highlighter_capped.json` put the same cap on the earlier head. `outputs/cache/` is the hidden-state cache on disk and is gitignored.
+- `outputs/heads.pt`, `outputs/scores.json` — round 1 weights and the one-shot scores. `outputs/heads_round2.pt` and `outputs/scores_round2.json` are the second run. `outputs/heads_round3.pt` and `outputs/scores_round3.json` are the document-reader run, scored once on exam 3. `outputs/heads_round4.pt` and `outputs/scores_round4.json` are the 200-document run, scored once on exam 4. `outputs/heads_highlighter.pt`, `outputs/scores_highlighter.json`, and `outputs/predictions_highlighter.json` are the single-highlighter re-check. `outputs/heads_highlighter_blocked.pt`, `outputs/scores_highlighter_blocked.json`, and `outputs/predictions_highlighter_blocked.json` are the same head after the question was blocked from the text. `outputs/scores_highlighter_blocked_capped.json` and `outputs/predictions_highlighter_blocked_capped.json` score that head again with the training span cap. `outputs/scores_highlighter_capped.json` and `outputs/predictions_highlighter_capped.json` put the same cap on the earlier head. `outputs/scores_highlighter_blocked_chained.json` and `outputs/predictions_highlighter_blocked_chained.json` place the list and sum parts of the blocked head in text order. `outputs/cache/` is the hidden-state cache on disk and is gitignored.
 - `blogs/mark-and-measure.md` — this note.
 
 ## Open threads for the essay

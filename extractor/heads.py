@@ -61,6 +61,95 @@ def choose_span(start: torch.Tensor, end: torch.Tensor, limit: int) -> tuple[int
     return start_at, end_at
 
 
+def choose_spans(
+    starts: list[torch.Tensor],
+    ends: list[torch.Tensor],
+    limit: int,
+) -> list[tuple[int, int]]:
+    """Place several spans in order. Each later span starts after the previous end.
+
+    The score is the sum of each span's start score plus end score. Each span is
+    at most `limit` tokens. Ties keep the earlier start, then the earlier end.
+    A single span matches choose_span. If the document cannot hold the chain,
+    each span falls back to choose_span on its own.
+    """
+    if not starts or len(starts) != len(ends):
+        raise ValueError("starts and ends must be the same non-empty list")
+    count = int(starts[0].numel())
+    for start, end in zip(starts, ends):
+        if start.shape != (count,) or end.shape != (count,):
+            raise ValueError(f"span logits must have shape ({count},)")
+    if limit < 1:
+        raise ValueError(f"span limit must be at least 1, got {limit}")
+    if count == 0:
+        raise ValueError("document has no tokens")
+    if count < len(starts):
+        return [choose_span(start, end, limit) for start, end in zip(starts, ends)]
+
+    neg = torch.finfo(torch.float32).min / 8
+    index = torch.arange(count)
+    length = index[None, :] - index[:, None] + 1
+    allowed = (length >= 1) & (length <= limit)
+    layers = []
+    previous = None
+    for start, end in zip(starts, ends):
+        if previous is None:
+            best_before = torch.zeros(count, dtype=torch.float32)
+            prev_for_start = None
+        else:
+            best_before = _scores_ending_before(previous, neg)
+            prev_for_start = _earliest_end_before(previous)
+        scores = best_before[:, None] + start.float()[:, None] + end.float()[None, :]
+        scores = scores.masked_fill(~allowed, neg)
+        layers.append(
+            {
+                "start_at": scores.argmax(dim=0),
+                "best": scores.max(dim=0).values,
+                "prev_for_start": prev_for_start,
+            }
+        )
+        previous = layers[-1]["best"]
+    if float(previous.max()) <= float(neg) / 2:
+        return [choose_span(start, end, limit) for start, end in zip(starts, ends)]
+
+    end_at = int(previous.argmax())
+    chosen: list[tuple[int, int]] = []
+    for layer in reversed(layers):
+        start_at = int(layer["start_at"][end_at])
+        chosen.append((start_at, end_at))
+        if layer["prev_for_start"] is None:
+            break
+        end_at = int(layer["prev_for_start"][start_at])
+    chosen.reverse()
+    if len(chosen) != len(starts):
+        raise RuntimeError("span chain did not place every part")
+    return chosen
+
+
+def _scores_ending_before(best: torch.Tensor, neg: float) -> torch.Tensor:
+    """best[t] is a chain score ending at t. Result[a] is the best score ending before a."""
+    out = torch.empty_like(best)
+    out[0] = neg
+    if best.numel() > 1:
+        out[1:] = torch.cummax(best, dim=0).values[:-1]
+    return out
+
+
+def _earliest_end_before(best: torch.Tensor) -> torch.Tensor:
+    """Result[a] is the earliest end whose score is the max of best[:a]."""
+    count = int(best.numel())
+    result = torch.zeros(count, dtype=torch.long)
+    values = best.tolist()
+    running_idx = 0
+    running_max = values[0]
+    for position in range(1, count):
+        result[position] = running_idx
+        if values[position] > running_max:
+            running_max = values[position]
+            running_idx = position
+    return result
+
+
 class DocumentReader(nn.Module):
     """Pool document tokens with weights that depend on the question.
 
