@@ -3,6 +3,23 @@ import torch
 from extractor.heads import NumberHead, PointHead, number_loss, point_loss
 
 
+def test_choose_span_keeps_the_short_pair_when_the_far_end_scores_higher():
+    from extractor.heads import choose_span
+
+    start = torch.tensor([0.0, 5.0, 0.0, 0.0, 1.0])
+    end = torch.tensor([0.0, 0.0, 4.0, 0.0, 6.0])
+    assert choose_span(start, end, limit=2) == (1, 2)
+    assert choose_span(start, end, limit=5) == (1, 4)
+
+
+def test_choose_span_repairs_an_end_that_lands_before_the_start():
+    from extractor.heads import choose_span
+
+    start = torch.tensor([0.0, 0.0, 3.0])
+    end = torch.tensor([5.0, 0.0, 1.0])
+    assert choose_span(start, end, limit=3) == (0, 0)
+
+
 def test_missing_score_reads_the_best_match():
     torch.manual_seed(0)
     head = PointHead(8, inner=4)

@@ -37,6 +37,30 @@ class PointHead(nn.Module):
         return {"start": start, "end": end, "missing": missing.squeeze(-1)}
 
 
+def choose_span(start: torch.Tensor, end: torch.Tensor, limit: int) -> tuple[int, int]:
+    """Pick the start and end that score best together, no longer than `limit` tokens.
+
+    Independent argmax can put the end before the start, or on a token far past
+    the longest span this operation had in training. The score of a span is the
+    start score plus the end score. Ties keep the earlier start, then the earlier end.
+    """
+    if start.ndim != 1 or end.shape != start.shape:
+        raise ValueError(f"start and end must be one document, got {tuple(start.shape)} and {tuple(end.shape)}")
+    if limit < 1:
+        raise ValueError(f"span limit must be at least 1, got {limit}")
+    count = int(start.numel())
+    if count == 0:
+        raise ValueError("document has no tokens")
+    scores = start[:, None] + end[None, :]
+    index = torch.arange(count)
+    length = index[None, :] - index[:, None] + 1
+    allowed = (length >= 1) & (length <= limit)
+    scores = scores.masked_fill(~allowed, torch.finfo(scores.dtype).min)
+    chosen = int(scores.argmax())
+    start_at, end_at = divmod(chosen, count)
+    return start_at, end_at
+
+
 class DocumentReader(nn.Module):
     """Pool document tokens with weights that depend on the question.
 

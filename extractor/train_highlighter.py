@@ -14,7 +14,7 @@ from pathlib import Path
 import torch
 
 from extractor.gemma_cache import HIGHLIGHT_BLOCKED, HIGHLIGHT_CACHE
-from extractor.heads import PointHead, point_loss
+from extractor.heads import PointHead, choose_span, point_loss
 from extractor.highlight import dumps_public, group_questions, judge_group, summarize_highlighter
 
 OUT = Path("outputs")
@@ -37,20 +37,53 @@ def load_records(cache: Path, blocked: bool) -> list[dict]:
     return records
 
 
-def predict_span(head: PointHead, question: dict, doc_states: torch.Tensor, threshold: float) -> dict:
+def span_limits(records: list[dict]) -> dict[str, int]:
+    """Longest gold span of each operation on the training documents, in tokens."""
+    limits: dict[str, int] = {}
+    for record in records:
+        if record["split"] != "train":
+            continue
+        for question in record["questions"]:
+            if question["missing"]:
+                continue
+            length = int(question["end"]) - int(question["start"]) + 1
+            if length < 1:
+                raise RuntimeError(f"{record['id']} {question['field']} has an empty gold span")
+            op = question["recipe"]["op"]
+            limits[op] = max(limits.get(op, 1), length)
+    if not limits:
+        raise RuntimeError("training records have no spans to measure")
+    return limits
+
+
+def predict_span(
+    head: PointHead,
+    question: dict,
+    doc_states: torch.Tensor,
+    threshold: float,
+    limits: dict[str, int],
+) -> dict:
     query = question["q_state"].detach().float().unsqueeze(0)
     outputs = head(doc_states.detach().float().unsqueeze(0), query)
     missing = bool(torch.sigmoid(outputs["missing"])[0] >= threshold)
-    start = int(outputs["start"].argmax(dim=-1)[0])
-    end = int(outputs["end"].argmax(dim=-1)[0])
+    op = question["recipe"]["op"]
+    if op in limits:
+        limit = limits[op]
+    elif op == "missing":
+        limit = int(doc_states.shape[0])
+    else:
+        raise RuntimeError(f"no training span for {op}")
+    start, end = choose_span(outputs["start"][0], outputs["end"][0], limit)
     return {"missing": missing, "start": start, "end": end}
 
 
-def score_record(head: PointHead, record: dict, threshold: float) -> dict:
+def score_record(head: PointHead, record: dict, threshold: float, limits: dict[str, int]) -> dict:
     offsets = [tuple(pair) for pair in record["doc_offsets"]]
     fields = []
     for group in group_questions(record["questions"]):
-        predictions = [predict_span(head, question, record["doc_states"], threshold) for question in group]
+        predictions = [
+            predict_span(head, question, record["doc_states"], threshold, limits) for question in group
+        ]
         fields.append(judge_group(group, predictions, offsets, record["text"]))
     return {
         "id": record["id"],
@@ -62,12 +95,92 @@ def score_record(head: PointHead, record: dict, threshold: float) -> dict:
     }
 
 
-def evaluate(head: PointHead, records: list[dict], threshold: float) -> tuple[list[dict], dict]:
+def evaluate(
+    head: PointHead,
+    records: list[dict],
+    threshold: float,
+    limits: dict[str, int],
+) -> tuple[list[dict], dict]:
     scored = []
     with torch.no_grad():
         for record in records:
-            scored.append(score_record(head, record, threshold))
+            scored.append(score_record(head, record, threshold, limits))
     return scored, summarize_highlighter(scored)
+
+
+def load_point(path: Path) -> tuple[PointHead, dict]:
+    blob = torch.load(path, weights_only=False)
+    state = dict(blob["point"])
+    if "missing.weight" in state:
+        state["missing_question.weight"] = state.pop("missing.weight")
+        state["missing_question.bias"] = state.pop("missing.bias")
+        state["missing_match.weight"] = torch.zeros(1, 2)
+        state["missing_match.bias"] = torch.zeros(1)
+    head = PointHead(int(blob["width"]))
+    head.load_state_dict(state)
+    head.eval()
+    return head, blob
+
+
+def rescore(records: list[dict], blocked: bool) -> None:
+    """Score a saved head again. The weights and the missing threshold stay as they were."""
+    suffix = "_blocked" if blocked else ""
+    head, blob = load_point(OUT / f"heads_highlighter{suffix}.pt")
+    limits = span_limits(records)
+    threshold = float(blob["selection"]["threshold"])
+    splits: dict[str, list[dict]] = {}
+    for record in records:
+        splits.setdefault(record["split"], []).append(record)
+    predictions = {}
+    after = {}
+    longer = {}
+    for name in SCORED_SPLITS:
+        if name not in splits:
+            continue
+        scored, after[name] = evaluate(head, splits[name], threshold, limits)
+        predictions[name] = scored
+        extra = 0
+        for record in splits[name]:
+            for question in record["questions"]:
+                if question["missing"]:
+                    continue
+                length = int(question["end"]) - int(question["start"]) + 1
+                if length > limits[question["recipe"]["op"]]:
+                    extra += 1
+        longer[name] = extra
+    payload = {
+        "weights_file": f"outputs/heads_highlighter{suffix}.pt",
+        "threshold": threshold,
+        "threshold_note": "Kept from the saved run. This cap was not used to choose the epoch or the threshold.",
+        "span_limit_rule": (
+            "For each operation, the marked span may be at most as many tokens as the longest "
+            "gold span of that operation on the training documents. The chosen span is the pair "
+            "with the highest start score plus end score inside that length. The missing score is unchanged."
+        ),
+        "span_limits": limits,
+        "gold_spans_longer_than_the_training_max": longer,
+        "blocked": blocked,
+        "after": after,
+        "readout": (
+            "same saved point head. A span is the best start-plus-end pair no longer than the "
+            "longest training span of that operation. The program then reads the marked characters."
+        ),
+    }
+    OUT.mkdir(parents=True, exist_ok=True)
+    score_path = OUT / f"scores_highlighter{suffix}_capped.json"
+    pred_path = OUT / f"predictions_highlighter{suffix}_capped.json"
+    score_path.write_text(dumps_public(payload))
+    pred_path.write_text(dumps_public(predictions))
+    exam = after["exam4"]
+    print(
+        f"exam4 span {exam['fields_span']['correct']}/{exam['fields_span']['total']} "
+        f"value {exam['fields_value']['correct']}/{exam['fields_value']['total']}",
+        flush=True,
+    )
+    for op in ("list", "sum", "copy", "read_date", "median"):
+        row = exam["by_op_value"][op]
+        print(f"exam4 {op} {row['correct']}/{row['total']}", flush=True)
+    print(f"wrote {score_path} {pred_path}", flush=True)
 
 
 def loss_on(head: PointHead, record: dict, question: dict) -> torch.Tensor:
@@ -85,11 +198,15 @@ def main() -> None:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--blocked", action="store_true", help="train on question states that cannot see the text")
+    parser.add_argument("--rescore", action="store_true", help="score the saved head with the training span cap")
     args = parser.parse_args()
     random.seed(SEED)
     torch.manual_seed(SEED)
     cache = HIGHLIGHT_BLOCKED if args.blocked else HIGHLIGHT_CACHE
     records = load_records(cache, args.blocked)
+    if args.rescore:
+        rescore(records, args.blocked)
+        return
     splits: dict[str, list[dict]] = {}
     for record in records:
         splits.setdefault(record["split"], []).append(record)
@@ -109,6 +226,7 @@ def main() -> None:
     best_state = None
     epoch = 0
     limit = EPOCHS
+    limits = span_limits(records)
     while epoch < limit:
         epoch += 1
         random.shuffle(train_questions)
@@ -123,8 +241,8 @@ def main() -> None:
             total += float(loss.detach())
         head.eval()
         train_loss = total / len(train_questions)
-        _, train_summary = evaluate(head, splits["train"], 0.5)
-        _, val_summary = evaluate(head, splits["val"], 0.5)
+        _, train_summary = evaluate(head, splits["train"], 0.5, limits)
+        _, val_summary = evaluate(head, splits["val"], 0.5, limits)
         row = {
             "epoch": epoch,
             "train_loss": train_loss,
@@ -156,7 +274,7 @@ def main() -> None:
     chosen_threshold = None
     chosen_key = None
     for threshold in THRESHOLDS:
-        _, summary = evaluate(head, splits["val"], threshold)
+        _, summary = evaluate(head, splits["val"], threshold, limits)
         threshold_scores[str(threshold)] = {
             "fields_span": summary["fields_span"],
             "documents_span": summary["documents_span"],
@@ -174,12 +292,12 @@ def main() -> None:
     apply(initial)
     before = {}
     for name in scored_names:
-        _, before[name] = evaluate(head, splits[name], chosen_threshold)
+        _, before[name] = evaluate(head, splits[name], chosen_threshold, limits)
     apply(best_state)
     after = {}
     predictions = {}
     for name in scored_names:
-        scored, after[name] = evaluate(head, splits[name], chosen_threshold)
+        scored, after[name] = evaluate(head, splits[name], chosen_threshold, limits)
         predictions[name] = scored
     payload = {
         "seed": SEED,
@@ -206,11 +324,14 @@ def main() -> None:
         "readout": (
             "one point head. Question tokens cannot attend to the text. "
             "The missing score reads the question state and the best start and end match. "
-            "The program reads the marked spans."
+            "The marked span is the best start-plus-end pair no longer than the longest "
+            "training span of that operation. The program reads the marked spans."
             if args.blocked
             else
             "one point head. The question-end state is the same causal state as before: "
-            "it has seen the text and the question. The program reads the marked spans."
+            "it has seen the text and the question. The marked span is the best start-plus-end "
+            "pair no longer than the longest training span of that operation. "
+            "The program reads the marked spans."
         ),
         "data": (
             "training texts are the existing 200. Exams are the four 24-document sets already on disk. "
